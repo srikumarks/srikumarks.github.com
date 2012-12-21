@@ -1,0 +1,681 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Classes and Javascript - Codaholic</title>
+  <meta name="author" content="Srikumar">
+
+  
+  <meta name="description" content="">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://srikumarks.github.com/blog/2012/04/12/classes-and-javascript/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Codaholic" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-30922656-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Codaholic</a></h1>
+  
+    <h2>Does the dog have Turing nature?</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:srikumarks.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Classes and Javascript</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-12T00:00:00+05:30" pubdate data-updated="true">Apr 12<span>th</span>, 2012</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>If you have been programming in Java and C++ for a while and are used to
+thinking about problems in terms of classes and inheritance, you may find
+yourself struggling with Javascript since it has only objects.  This post is to
+&#8211; a) provide you with a perspective on why programming with only objects is
+powerful and b) show you how to translate the class-based concepts you&#8217;re used
+to thinking in into the Javascript world.</p>
+
+<p>The Javascript object system comes from the language <a href="http://en.wikipedia.org/wiki/Self_(programming_language)">Self</a> which pioneered
+object oriented modeling using prototypes, along with many dynamic compilation
+techniques that later went into the HotSpot JVM. The motivation for destroying
+the class-object dichotomy is that working with classes forces you to think
+about object categories well before you&#8217;ve really understood the problem
+domain.  The claim by the Self folks is that your approximate and often
+downright invalid classes get frozen in over time and the system becomes harder
+to adapt to changes in understanding about the problem being modelled.</p>
+
+<p>So, what <em>are</em> classes? &#8230; really?</p>
+
+<h2>Classes as machines</h2>
+
+<p>When you write a class in a language like Java or C++, you&#8217;re in essence
+writing a recipe for making objects with certain properties and behaviours. The
+compiler then translates this recipe into a machine that can make such objects
+whenever you need them at runtime. If you ignore the compilation step, you can
+think of a &#8220;class&#8221; itself as the machine that produces objects, without loss of
+accuracy.  It is this operational view of classes that offers the key to
+reusing class-based modeling techniques in an objects-only language like
+Javascript.</p>
+
+<p>So, a class is a machine &#8212; in goes some parameters available only at runtime
+and out comes an object with the properties and behaviour as dictated by the
+recipe. That thinking can be directly modelled as a function that takes some
+parameters and produces an object with the right properties and behaviour.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="nx">MyClass</span><span class="p">(</span><span class="nx">params</span><span class="p">...);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In what follows, I&#8217;ll omit the parameters for simplicity of presentation and
+you can always add them back later. So we have -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="nx">MyClass</span><span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This gives a &#8220;first order&#8221; view of classes. Though a useful way of thinking
+in itself, you soon hit a modelling wall the moment you want another class
+that is only slightly different from one you already wrote. You cringe at
+having to copy-paste code to produce make objects of this slightly different
+variety. What you want is some way to code up only the incremental difference
+from <code>MyClass</code>.</p>
+
+<h2>Combining classes</h2>
+
+<p>One way out is to write a function that can combine the properties and behaviour
+of two given objects &#8211; call it <code>blend</code>. So that will let you write -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">objVariant</span> <span class="o">=</span> <span class="nx">blend</span><span class="p">(</span><span class="nx">MyClass</span><span class="p">(),</span> <span class="nx">NewBehaviour</span><span class="p">());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>.. where <code>NewBehaviour</code> is a function that models only what is different
+from <code>MyClass</code>.</p>
+
+<p>The above approach, though valid, is limited by the inability of <code>NewBehaviour</code>
+to have any kind of say over the changes to be introduced to the original object.
+It would be ideal if <code>NewBehaviour</code> could first take a look at the object produced
+by <code>MyClass</code> before it makes any changes to it. Therefore, <code>NewBehaviour</code> is better
+written as a function that takes in the object produced by <code>MyClass</code> and returns
+a new object.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">objVariant</span> <span class="o">=</span> <span class="nx">NewBehaviour</span><span class="p">(</span><span class="nx">MyClass</span><span class="p">());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>NewBehaviour</code> can now be made arbitarily flexible. In retrospect, we could&#8217;ve
+also written <code>MyClass</code> with an extra object parameter, so that the combination
+of these two classes itself looks like an &#8220;object transformation machine&#8221;.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">objVariant</span> <span class="o">=</span> <span class="nx">NewBehaviour</span><span class="p">(</span><span class="nx">MyClass</span><span class="p">(</span><span class="nx">obj</span><span class="p">));</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In other words, we model class inheritance in Javascript using function composition.
+We can now write this notion of inheritance as a &#8220;higher order function&#8221; in Javascript
+as -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">Inherit</span><span class="p">(</span><span class="nx">Parent</span><span class="p">,</span> <span class="nx">Delta</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="nx">Delta</span><span class="p">(</span><span class="nx">Parent</span><span class="p">(</span><span class="nx">obj</span><span class="p">));</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Multiple inheritance and &#8220;mixins&#8221;</h2>
+
+<p>The traditional notion of multiple inheritance froma number of classes <code>C1</code>, <code>C2</code>, and
+so on in a specific order is then merely repeated application of <code>Inherit</code>. If we have
+an array of classes <code>ClassArr</code> and we want to make a class that &#8220;inherits&#8221; from all of them,
+all we need to do is &#8211;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">NoChange</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">obj</span><span class="p">;</span> <span class="p">}</span>
+</span><span class='line'><span class="kd">var</span> <span class="nx">MultiObj</span> <span class="o">=</span> <span class="nx">ClassArr</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span><span class="nx">Inherit</span><span class="p">,</span> <span class="nx">NoChange</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>.. which we can abstract again as a function that takes an array of classes
+and produces a &#8220;multiply inherited class&#8221;.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">MultiInherit</span><span class="p">(</span><span class="nx">ClassArr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">ClassArr</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span><span class="nx">Inherit</span><span class="p">,</span> <span class="nx">NoChange</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>Modify or copy?</h4>
+
+<p>Notice that we haven&#8217;t placed any constraints on these functions so far
+with respect to whether they destructively modify the object passed in,
+or return another object with the necessary properties. Both these
+are acceptable and you may want to weigh which approach is suitable for
+you. For instance, creating copies costs memory, but you trade off a one
+time performance hit for repeated searches up an &#8220;inheritance tree&#8221;.</p>
+
+<h2>Javascript&#8217;s &#8220;prototype&#8221; mechanism</h2>
+
+<p>Let us take a simple example of inheritance to make further digging easier to
+follow. Say we have an <code>Image</code> class that can produce objects that know how
+to <code>draw</code> themselves into a <code>context</code> in portrait mode.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">Image</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="p">...)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="c1">// ..</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="c1">// (pseudo code)</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">putPixels</span><span class="p">(</span><span class="nx">obj</span><span class="p">.</span><span class="nx">pixelData</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">height</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">obj</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>That was easy enough, but say we now want a variant of <code>Image</code> which produces
+objects that draw themselves in landscape mode. i.e., we want -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">landscapeImage</span> <span class="o">=</span> <span class="nx">Landscape</span><span class="p">(</span><span class="nx">Image</span><span class="p">(</span><span class="nx">obj</span><span class="p">));</span>
+</span><span class='line'><span class="nx">landscapeImage</span><span class="p">.</span><span class="nx">draw</span><span class="p">(</span><span class="nx">context</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>How would we write the <code>Landscape</code> class?</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">Landscape</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">lsDraw</span><span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">save</span><span class="p">();</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">rotate</span><span class="p">(</span><span class="mi">90</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">(</span><span class="nx">context</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">restore</span><span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span> <span class="o">=</span> <span class="nx">lsDraw</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">obj</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Simple enough? &#8230; Oops! We&#8217;ve just introduced  an infinte draw loop because
+the landscape object&#8217;s draw keeps calling itself!</p>
+
+<p>To solve this, we need to first store away the object&#8217;s original
+<code>draw</code> function and use <em>that</em> one within <code>lsDraw</code>.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">Landscape</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">portraitDraw</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">lsDraw</span><span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">save</span><span class="p">();</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">rotate</span><span class="p">(</span><span class="mi">90</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">portraitDraw</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">restore</span><span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span> <span class="o">=</span> <span class="nx">lsDraw</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">obj</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is then the approach to use to model calling the &#8220;parent method&#8221; within a
+&#8220;child class&#8221;.</p>
+
+<p>If you&#8217;re modifying a dozen different methods, it can get pretty tiring
+to save every method away in a variable before calling it within a modified
+method. This, then, motivates the &#8220;prototype chain&#8221; mechanism in Javascript.</p>
+
+<h2>The &#8220;prototype chain&#8221;</h2>
+
+<p>Javascript provides a way for an object to delegate property and method
+access to another object if they aren&#8217;t part of itself. Though we can
+set up arbitrary numbers of such delegation chains ourselves, the builtin
+mechanism serves to ease single inheritance cases. Our <code>Landscape</code> class
+can now be written as -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">Landscape</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">extendedObj</span> <span class="o">=</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">lsDraw</span><span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">save</span><span class="p">();</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">rotate</span><span class="p">(</span><span class="mi">90</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">extendedObj</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">context</span><span class="p">.</span><span class="nx">save</span><span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">extendedObj</span><span class="p">.</span><span class="nx">draw</span> <span class="o">=</span> <span class="nx">lsDraw</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">extendedObj</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>Object.create</code> makes a new object that looks and behaves <em>exactly</em> like <code>obj</code>,
+but now when you add a new property to <code>extendedObj</code>, the original <code>obj</code>
+remains unmofied. Now, we don&#8217;t need to save away old method definitions
+because the old object will always have them and so we can refer to the old
+<code>draw</code> function as just <code>obj.draw</code>.</p>
+
+<p>So, what&#8217;s up with the weird <code>obj.draw.call(extendedObj, context)</code> and why
+can&#8217;t we just write <code>obj.draw(context)</code> instead?</p>
+
+<p>To answer that, we need to look at what <code>obj.draw(..)</code> means to Javascript.
+It means &#8220;draw <code>obj</code> making use of <em>its</em> properties&#8221;. If the <code>draw</code> function
+needs to know the <code>width</code> of the object to do the drawing, it will access
+it will get <code>obj.width</code> within the draw function. If we later on modify the
+width of the <code>extendedObj</code>, that modified value will not be accessible when
+running <code>obj.draw()</code> because <code>obj</code> does not know anything about the existence
+of <code>extendedObj</code>.</p>
+
+<p>The solution then, is to tell the <code>obj.draw</code> function to run, but ask it to
+make use of the properties of <code>extendedObj</code> instead. Now, since <code>extendedObj</code>
+otherwise has all the properties of <code>obj</code>, there is no information loss to the
+<code>obj.draw</code> function. The way we tell the <code>obj.draw</code> function to do that is to
+use the <code>call</code> method of the <code>Function</code> object.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">extendedObj</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The above code, btw, is equivalent to the following -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">oldDraw</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">;</span>
+</span><span class='line'><span class="nx">oldDraw</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">extendedObj</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Adaptive methods</h2>
+
+<p>Let&#8217;s take a second look at the implementation of <code>Image</code> and the <code>draw</code>
+function in particular &#8211;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="c1">// ...</span>
+</span><span class='line'><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{};</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'>    <span class="nx">context</span><span class="p">.</span><span class="nx">putPixels</span><span class="p">(</span><span class="nx">obj</span><span class="p">.</span><span class="nx">pixels</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">height</span><span class="p">);</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If the draw function was originally implemented like above, then it would
+be of no use to try to change the context using <code>Function.call</code> like in
+<code>old.draw.call(extendedObj)</code> because the body of <code>old.draw</code> always explicitly
+refers to the properties of <code>obj</code> itself.</p>
+
+<blockquote><p>Oops! It looks like the original <code>Image</code> implementation cannot be extended,
+although it would work fine on its own!</p></blockquote>
+
+<p>What we want in this case, is for the <code>draw</code> function to be more generic and
+pull properties from an arbitrary object. That is done using the dynamically
+scoped <code>this</code> argument, which, when used within the body of a function, refers
+to the object that the caller passed as the first argument to the <code>call</code>
+function.</p>
+
+<p>Here is a modified <code>draw</code> -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'>    <span class="nx">context</span><span class="p">.</span><span class="nx">putPixels</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">pixels</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">height</span><span class="p">);</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>When this draw function is called with <code>obj.draw.call(extendedObj)</code>,
+the given <code>extendedObj</code> will substitute <code>this</code> within the funciton body,
+and we get the correct behaviour. When you simply call <code>obj.draw(context)</code>,
+Javascript looks to the left of the <code>draw</code> name figures out that <code>obj</code>
+must be the <code>this</code> that the caller intended.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="o">&lt;==&gt;</span> <span class="nx">obj</span><span class="p">.</span><span class="nx">draw</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>Therefore, in a prototype based object system, methods need to
+be <em>explicitly</em> designed to support extension through prototype
+chains.</p></blockquote>
+
+<h2>Implementation details</h2>
+
+<p>Every object <code>obj</code> in Javascript has an <code>obj.__proto__</code> property lurking in the
+shadows, which refers to the object that will be looked up should some property
+requested of  <code>obj</code> not be found in it. This is called the object&#8217;s &#8220;prototype&#8221;
+and Javascript provides some simple special syntax to support making objects
+using this prototype chain - the <code>new</code> operator.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">MyClass</span><span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>What <code>new</code> does is exactly what the function <code>make</code> shown below does -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">make</span><span class="p">(</span><span class="nx">ClassFn</span><span class="p">,</span> <span class="nx">args</span><span class="p">...)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{};</span>
+</span><span class='line'>    <span class="nx">obj</span><span class="p">.</span><span class="nx">__proto__</span> <span class="o">=</span> <span class="nx">ClassFn</span><span class="p">.</span><span class="nx">prototype</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">ClassFn</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">args</span><span class="p">...)</span> <span class="o">||</span> <span class="nx">obj</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Since the newly created <code>obj</code> is passed as the context in <code>ClassFn.call</code>,
+the body of <code>ClassFn</code> can refer to the object whose properties need to
+be filled in simply using <code>this</code> and it need not bother creating a
+new object as well, since one is already available.</p>
+
+<p>Note: There is nothing special about <code>ClassFn.prototype</code> and if you&#8217;re
+writing your own <code>make</code> function, you can store a prototype object in
+any field of <code>ClassFn</code>. It just happens to be the property that <code>new</code>
+refers to in the bulitin implementation.</p>
+
+<h2>Wrapping it all up</h2>
+
+<ol>
+<li><p>Model classes as functions that produce objects.</p></li>
+<li><p>Model inheritance and &#8220;mixins&#8221; using higher order functions
+and function composition.</p></li>
+<li><p>When implementing methods, be aware of whether you want the method
+to be extensible via the prototype chain or not. If a method with
+a bound object in its body is called, it might end up modifying
+the behaviour of <em>all</em> the objects that it is a prototype of!</p></li>
+<li><p>Always be aware of what <code>this</code> value is being implicated in any
+function or method call, by translating <code>fn(arg)</code> into <code>fn.call(??, arg)</code>.</p></li>
+</ol>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Srikumar</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-12T00:00:00+05:30" pubdate data-updated="true">Apr 12<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2012/04/12/classes-and-javascript/" data-via="" data-counturl="http://srikumarks.github.com/blog/2012/04/12/classes-and-javascript/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/01/03/social-hash-as-identity/" title="Previous Post: Social hash as identity">&laquo; Social hash as identity</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2012/04/13/a-mental-model-for-variables-and-closures-in-javascript/" title="Next Post: A mental model for variables and closures in Javascript">A mental model for variables and closures in Javascript &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/28/on-eval-being-evil/">On eval and evil.</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/30/toy-language-using-j-expressions/">Toy language using j-expressions</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/15/j-expressions/">J-expressions</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">Creating DSLs in Javascript using J-expressions</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2012 - Srikumar -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'codaholic';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

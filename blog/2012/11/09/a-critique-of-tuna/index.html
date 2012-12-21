@@ -1,0 +1,329 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>A critique of Tuna - Codaholic</title>
+  <meta name="author" content="Srikumar">
+
+  
+  <meta name="description" content="">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Codaholic" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-30922656-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Codaholic</a></h1>
+  
+    <h2>Does the dog have Turing nature?</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:srikumarks.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">A Critique of Tuna</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-09T00:00:00+05:30" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
+project. Here, I collect some thoughts about the code design decisions for their
+effects framework, since I myself have written <a href="http://github.com/srikumarks/steller">Steller</a>.</p>
+
+<h2>Parameters</h2>
+
+<p>In Tuna, the effects module&#8217;s parameters are presented to the API user as
+object properties and implemented using getters and setters. This is obviously
+simple from the perspective of a module user. However, it has several disadvantages -</p>
+
+<p>If a module contains another module and you want to expose that parameter,
+you&#8217;re forced to write another getter/setter to handle the indirection. Such
+parameters cannot be passed around &#8220;by reference&#8221;. The only thing you can
+do with them is to set/get their values. &#8220;By reference&#8221; passing is a simple
+way to expose an internal module&#8217;s parameters to the module user which is an
+important kind of composability.</p>
+
+<p>Owing to the getter/setter approach, meta information about parameters such as
+their range, defaults, automation capabilities, etc. need to be stored elsewhere
+in a &#8220;defaults&#8221; object, instead of being directly associated with them.</p>
+
+<p>In some of the effects, some internal values and other parameters need to be
+recomputed when a couple of parameters change. In this case, the code for
+updating the dependent parameters is duplicated since it is not particularly
+convenient to write a shared function local when defining parameters using
+<code>Object.create</code> like this -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="c1">//...</span>
+</span><span class='line'><span class="nx">baseFrequency</span><span class="o">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">enumerable</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+</span><span class='line'>    <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span><span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span><span class="p">},</span>
+</span><span class='line'>    <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">=</span> <span class="mi">50</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="nx">value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">baseFrequency</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">));</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterBp</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterPeaking</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">},</span>
+</span><span class='line'><span class="nx">excursionOctaves</span><span class="o">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">enumerable</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+</span><span class='line'>    <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span><span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">},</span>
+</span><span class='line'>    <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span> <span class="o">=</span> <span class="nx">value</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">baseFrequency</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">));</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterBp</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterPeaking</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">},</span>
+</span><span class='line'><span class="c1">//...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A simpler way to solve this would be to have parameters be first class objects
+that can be inspected, instead of just accessing and setting their values. Meta
+data about them can travel along with them. In <a href="http://github.com/srikumarks/steller">Steller</a>, watcher functions can
+be installed on parameters run code when the parameter&#8217;s value changes.</p>
+
+<h2>Inheritance using the <code>prototype</code> mechanism</h2>
+
+<p>One of the code design choices that vastly complicates the code in this case
+is the choice of using <code>prototype</code> based inheritance to define the properties
+of instantiated effects modules. While this is common in the JS world,
+in this case it deprives the programmer of a local context in which to hide
+internal objects from the effects module&#8217;s user and to write shared private
+code like in the case above. Any potential loss of efficiency in not using
+the prototype mechanism for this application is insignificant since object
+creation is not the thing we should be optimising for.</p>
+
+<p>The &#8220;define all methods and properties within the constructor function&#8221;
+approach is much more suitable in this situation.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Srikumar</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-11-09T00:00:00+05:30" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/" data-via="" data-counturl="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/08/28/on-eval-being-evil/" title="Previous Post: On eval and evil.">&laquo; On eval and evil.</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/28/on-eval-being-evil/">On eval and evil.</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/30/toy-language-using-j-expressions/">Toy language using j-expressions</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/15/j-expressions/">J-expressions</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">Creating DSLs in Javascript using J-expressions</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2012 - Srikumar -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'codaholic';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
