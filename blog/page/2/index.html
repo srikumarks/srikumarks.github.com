@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>On eval and evil. - Codaholic</title>
+  <title>Codaholic</title>
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="">
+  <meta name="description" content="&#8220;eval is evil&#8221; has become a maxim repeated in the Javascript community.
+Douglas Crockford, in Javascript: The Good Parts, rightly advises &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/">
+  <link rel="canonical" href="http://srikumarks.github.com/blog/page/2/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -74,12 +75,15 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div>
-<article class="hentry" role="article">
+      <div class="blog-index">
   
+  
+  
+    <article>
+      
   <header>
     
-      <h1 class="entry-title">On Eval and Evil.</h1>
+      <h1 class="entry-title"><a href="/blog/2012/08/28/on-eval-being-evil/">On Eval and Evil.</a></h1>
     
     
       <p class="meta">
@@ -97,14 +101,14 @@
 
 <time datetime="2012-08-28T00:00:00+05:30" pubdate data-updated="true">Aug 28<span>th</span>, 2012</time>
         
-         | <a href="#disqus_thread">Comments</a>
+         | <a href="/blog/2012/08/28/on-eval-being-evil/#disqus_thread">Comments</a>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>&#8220;eval is evil&#8221; has become a maxim repeated in the Javascript community.
+  <div class="entry-content"><p>&#8220;eval is evil&#8221; has become a maxim repeated in the Javascript community.
 Douglas Crockford, in <a href="http://shop.oreilly.com/product/9780596517748.do">Javascript: The Good Parts</a>, rightly advises against
 hidden and explicit uses of eval for security and clarity reasons. Now, I find
 <code>eval</code> useful to implement <a href="/gyan/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">DSLs in Javascript</a>. The in-browser <a href="http://coffeescript.org">CoffeeScript</a>
@@ -499,61 +503,22 @@ access to properties that will be added to <code>window</code> <em>after</em> th
 making DSLs around Javascript, it helps to know its workings a bit deeper.
 Remember - there is always something &#8220;good&#8221; in every &#8220;evil&#8221; ;)</p>
 </div>
-
-
-  <footer>
-    <p class="meta">
-      
   
-
-<span class="byline author vcard">Posted by <span class="fn">Srikumar</span></span>
-
-      
-
-
-
-
-
-
-
-
   
 
 
-<time datetime="2012-08-28T00:00:00+05:30" pubdate data-updated="true">Aug 28<span>th</span>, 2012</time>
-      
-
-<span class="categories">
+    </article>
   
-    <a class='category' href='/blog/categories/javascript/'>javascript</a>
-  
-</span>
-
-
-    </p>
+  <div class="pagination">
     
-      <div class="sharing">
-  
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/" data-via="" data-counturl="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/" >Tweet</a>
-  
-  
-  
-</div>
-
+      <a class="prev" href="/blog/page/3/">&larr; Older</a>
     
-    <p class="meta">
-      
-        <a class="basic-alignment left" href="/blog/2012/04/30/toy-language-using-j-expressions/" title="Previous Post: Toy language using j-expressions">&laquo; Toy language using j-expressions</a>
-      
-      
-        <a class="basic-alignment right" href="/blog/2012/11/09/a-critique-of-tuna/" title="Next Post: A critique of Tuna">A critique of Tuna &raquo;</a>
-      
-    </p>
-  </footer>
-</article>
-
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/">Newer &rarr;</a>
+    
+  </div>
 </div>
-
 <aside class="sidebar">
   
     <section>
@@ -590,7 +555,6 @@ Remember - there is always something &#8220;good&#8221; in every &#8220;evil&#82
 
   
 </aside>
-
 
     </div>
   </div>

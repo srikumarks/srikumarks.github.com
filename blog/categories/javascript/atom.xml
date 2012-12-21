@@ -1,0 +1,1018 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: javascript | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2012-12-21T11:06:39+05:30</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[A critique of Tuna]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/"/>
+    <updated>2012-11-09T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna</id>
+    <content type="html"><![CDATA[<p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
+project. Here, I collect some thoughts about the code design decisions for their
+effects framework, since I myself have written <a href="http://github.com/srikumarks/steller">Steller</a>.</p>
+
+<h2>Parameters</h2>
+
+<p>In Tuna, the effects module's parameters are presented to the API user as
+object properties and implemented using getters and setters. This is obviously
+simple from the perspective of a module user. However, it has several disadvantages -</p>
+
+<p>If a module contains another module and you want to expose that parameter,
+you're forced to write another getter/setter to handle the indirection. Such
+parameters cannot be passed around "by reference". The only thing you can
+do with them is to set/get their values. "By reference" passing is a simple
+way to expose an internal module's parameters to the module user which is an
+important kind of composability.</p>
+
+<p>Owing to the getter/setter approach, meta information about parameters such as
+their range, defaults, automation capabilities, etc. need to be stored elsewhere
+in a "defaults" object, instead of being directly associated with them.</p>
+
+<p>In some of the effects, some internal values and other parameters need to be
+recomputed when a couple of parameters change. In this case, the code for
+updating the dependent parameters is duplicated since it is not particularly
+convenient to write a shared function local when defining parameters using
+<code>Object.create</code> like this -</p>
+
+<p>``` js</p>
+
+<pre><code>//...
+baseFrequency: {
+    enumerable: true,
+    get: function () {return this._baseFrequency},
+    set: function (value) {
+        this._baseFrequency = 50 * Math.pow(10, value * 2);
+        this._excursionFrequency = Math.min(this.sampleRate / 2, this.baseFrequency * Math.pow(2, this._excursionOctaves));
+        this.filterBp.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+        this.filterPeaking.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+    }
+}, 
+excursionOctaves: {
+    enumerable: true,
+    get: function () {return this._excursionOctaves},
+    set: function (value) {
+        this._excursionOctaves = value;
+        this._excursionFrequency = Math.min(this.sampleRate / 2, this.baseFrequency * Math.pow(2, this._excursionOctaves));
+        this.filterBp.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+        this.filterPeaking.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+    }
+}, 
+//...
+</code></pre>
+
+<p>```</p>
+
+<p>A simpler way to solve this would be to have parameters be first class objects
+that can be inspected, instead of just accessing and setting their values. Meta
+data about them can travel along with them. In <a href="http://github.com/srikumarks/steller">Steller</a>, watcher functions can
+be installed on parameters run code when the parameter's value changes.</p>
+
+<h2>Inheritance using the <code>prototype</code> mechanism</h2>
+
+<p>One of the code design choices that vastly complicates the code in this case
+is the choice of using <code>prototype</code> based inheritance to define the properties
+of instantiated effects modules. While this is common in the JS world,
+in this case it deprives the programmer of a local context in which to hide
+internal objects from the effects module's user and to write shared private
+code like in the case above. Any potential loss of efficiency in not using
+the prototype mechanism for this application is insignificant since object
+creation is not the thing we should be optimising for.</p>
+
+<p>The "define all methods and properties within the constructor function"
+approach is much more suitable in this situation.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[On eval and evil.]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/"/>
+    <updated>2012-08-28T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil</id>
+    <content type="html"><![CDATA[<p>"eval is evil" has become a maxim repeated in the Javascript community.
+Douglas Crockford, in <a href="http://shop.oreilly.com/product/9780596517748.do">Javascript: The Good Parts</a>, rightly advises against
+hidden and explicit uses of eval for security and clarity reasons. Now, I find
+<code>eval</code> useful to implement <a href="/gyan/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">DSLs in Javascript</a>. The in-browser <a href="http://coffeescript.org">CoffeeScript</a>
+compiler wouldn't be possible without <code>eval</code> (directly or indirectly). So, in
+this post, I wish to explore what appears interesting about <code>eval</code> that is
+relevant to building such DSLs.</p>
+
+<p>For this post, I'll stick to the behaviour of <code>eval</code> in the <strong>Chrome</strong> browser
+(i.e. the V8 engine, which also applies to <a href="http://nodejs.org">Node.js</a>). We'll go through a
+number of contexts and examine how <code>eval</code> behaves in each of those. You can
+copy paste the code shown here to Chrome's JS console and run them.</p>
+
+<h2>What is <code>eval</code>?</h2>
+
+<p>A simplistic description is that you pass a Javascript string to <code>eval</code> and it
+will "evaluate" it as Javascript code, whatever that means. The <a href="http://www.ecma-international.org/publications/standards/Ecma-262.htm">ECMA-262</a>
+specification (edition 5.1) has the following to say on <code>eval</code> -</p>
+
+<blockquote><p><strong>10.4.2 Entering Eval Code</strong></p>
+
+<p>The following steps are performed when control enters the execution context for
+eval code:</p>
+
+<ol>
+<li><p>If there is no calling context or if the eval code is not being evaluated by
+a direct call (15.1.2.1.1) to the eval function then,</p>
+
+<p> a. Initialise the execution context as if it was a global execution context
+ using the eval code as C as described in 10.4.1.1.</p></li>
+<li><p>Else,</p>
+
+<p> a. Set the <code>ThisBinding</code> to the same value as the <code>ThisBinding</code> of the calling
+ execution context.</p>
+
+<p> b. Set the LexicalEnvironment to the same value as the <code>LexicalEnvironment</code>
+ of the calling execution context.</p>
+
+<p> c. Set the <code>VariableEnvironment</code> to the same value as the <code>VariableEnvironment</code>
+ of the calling execution context.</p></li>
+<li><p>If the eval code is strict code, then</p>
+
+<p> a. Let <code>strictVarEnv</code> be the result of calling <code>NewDeclarativeEnvironment</code>
+ passing the <code>LexicalEnvironment</code> as the argument.</p>
+
+<p> b. Set the <code>LexicalEnvironment</code> to <code>strictVarEnv</code>.</p>
+
+<p> c. Set the <code>VariableEnvironment</code> to <code>strictVarEnv</code>.</p></li>
+<li><p>Perform <em>Declaration Binding Instantiation</em> as described in 10.5 using the
+eval code.</p></li>
+</ol>
+
+
+<p><strong>10.4.2.1 Strict Mode Restrictions</strong></p>
+
+<p>The eval code cannot instantiate variable or function bindings in the variable
+environment of the calling context that invoked the eval if either the code of
+the calling context or the eval code is strict code. Instead such bindings are
+instantiated in a new VariableEnvironment that is only accessible to the eval
+code.</p></blockquote>
+
+<h2>Introducing local variables</h2>
+
+<p>An expression of the form <code>eval("var x = 10;")</code> is capable of introducing a new
+variable <code>x</code> in the context in which it is executed. However, as noted in the
+ECMA specification, if the eval code is strict, then you cannot introduce a new
+variable this way - i.e. <code>eval("var x = 10;")</code> will work, but
+<code>eval('"use strict"; var x = 10;')</code> will not work. No exception is thrown, but the
+variable is simply not introduced into the enclosing environment, though it is
+available to the rest of the evaled code.</p>
+
+<p>Consider the following function -</p>
+
+<p>``` js
+function localVars(x, stmt) {</p>
+
+<pre><code>eval(stmt);
+return x + y;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>All of the following behave as one might expect -</p>
+
+<ol>
+<li><code>localVars(10, "var y = 5;")</code> returns <code>15</code></li>
+<li><code>localVars(10, "var y = x + 5;")</code> returns <code>25</code>.</li>
+<li><code>localVars(10, "'use strict'; var y = 5;")</code> raises a <code>ReferenceError: y is not defined</code> exception.</li>
+</ol>
+
+
+<h2>Capturing local variables in closures</h2>
+
+<p>Consider the following function -</p>
+
+<p>``` js
+function captureSecretValue(code) {</p>
+
+<pre><code>var secret = 3.14159;
+return eval(code);
+</code></pre>
+
+<p>}
+```</p>
+
+<p><code>captureSecretValue("secret")</code> returns <code>3.14159</code> as expected. You can also
+create closures that capture the "secret" value -</p>
+
+<p><code>js
+var f = captureSecretValue("(function (x) { return secret * x; })");
+console.log(f(1)); // prints "3.14159"
+</code></p>
+
+<p>However, the following gives a <code>ReferenceError</code> -</p>
+
+<p>``` js
+function nest(code) {</p>
+
+<pre><code>var nestedSecret = 2;
+return eval(code);
+</code></pre>
+
+<p>}</p>
+
+<p>function captureNestedSecret(code, nest) {</p>
+
+<pre><code>var secret = 3.14159;
+return nest(code);
+</code></pre>
+
+<p>}</p>
+
+<p>console.log(captureNestedSecret("secret * nestedSecret", nest));
+```</p>
+
+<p>This illustrates that only the variables in the <em>lexical</em> context are available
+to <code>eval</code> and not those in its <em>evaluation</em> context. The following will
+therefore print <code>6.28318</code> as expected.</p>
+
+<p>``` js
+function captureNestedSecret(code) {</p>
+
+<pre><code>var secret = 3.14159;
+function nest() {
+    var nestedSecret = 2;
+    return eval(code);
+}
+return nest();
+</code></pre>
+
+<p>}</p>
+
+<p>console.log(captureNestedSecret("secret * nestedSecret"));
+```</p>
+
+<h2>Scope objects</h2>
+
+<p>If you have an object whose keys give variable names and whose values give their values,
+you can use <code>eval</code> in conjunction with the <code>with</code> statement (beware: evil squared!) to evaluate
+code in that scope. Here is what I mean -</p>
+
+<p>``` js
+function evalInScope(scope, code) {</p>
+
+<pre><code>with (scope) {
+    return eval(code);
+}
+</code></pre>
+
+<p>}</p>
+
+<p>var scope = {a: 10, b: 20};
+console.log(evalInScope(scope, "a + b")); // prints "30"
+console.log(evalInScope(Math, "acos(0)")); // prints "1.5707963267948966"
+```</p>
+
+<p>What is more interesting is that you can capture the "variables" in a closure
+that you create using eval as follows -</p>
+
+<p><code>js
+var f = evalInScope(scope, "(function (c) { return a + b * c; })");
+console.log(f(0)); // prints "10"
+console.log(f(2)); // prints "50"
+</code></p>
+
+<p>Since it is not the <em>values</em> of the variables that are being captured, but
+the <em>references</em>, you can now do -</p>
+
+<p><code>js
+scope.a = 100;
+console.log(f(0)); // prints "100"
+</code></p>
+
+<p>If you subsequently delete one of the variables in the <code>scope</code> object, you get
+a <code>ReferenceError</code> as one might expect. The <code>scope</code> object therefore provides
+access to the scope chain of the created closure. This interception is deep,
+since you can introduce new variables into the scope by manipulating <code>scope</code>
+as well.</p>
+
+<p><code>js
+var scope = {a: 10};
+var f = evalInScope(scope, "(function (c) { return a + b * c; })");
+console.log(f(0));  // ReferenceError
+scope.b = 20;       // Introduce binding for "b".
+console.log(f(0));  // prints "10"
+console.log(f(2));  // prints "50"
+</code></p>
+
+<h3>Named functions within <code>with</code></h3>
+
+<p>The following code doesn't work and throws a <code>ReferenceError</code> because
+the <code>inner</code> closure is instantiated outside the <code>with</code> scope by the V8
+compiler, contrary to what it might look like.</p>
+
+<p>``` js
+// (1) doesn't work
+var scope = {message: "hello world"};
+var greeting;
+with (scope) {</p>
+
+<pre><code>function inner() {
+    greeting = message;
+}
+inner();
+</code></pre>
+
+<p>}
+```</p>
+
+<p>The following alternative works in V8 because the closure is <em>created</em>
+when executing a statement within the <code>with</code> clause.</p>
+
+<p>``` js
+// (2) works
+var scope = {message: "hello world"};
+var greeting;
+with (scope) {</p>
+
+<pre><code>var inner = function () {
+    greeting = message;
+}
+inner();
+</code></pre>
+
+<p>}
+```</p>
+
+<p>This difference can be a WTF and points to the general recommendation of only
+using the latter "name a function through assignment" approach. We know that
+the definitions of named functions are lifted to the top of the surrounding
+scope, but also know that they are lifted out of any surrounding <code>with</code> blocks
+as well.</p>
+
+<blockquote><p><strong>Update</strong>: This inconsistency is a bug in V8 looks like. Firefox's VM
+behaves consistently in both the cases above. I've submitted a <a href="https://code.google.com/p/v8/issues/detail?id=2311">V8 bug report</a>
+for this problem.</p></blockquote>
+
+<h2>Preventing access to global objects</h2>
+
+<p>In a browser environment, all global symbols are available as properties of the
+<code>window</code> object. We can use this, in conjunction with the "scope object"
+feature as discussed above, to evaluate code that is to be prevented from
+touching any of these global objects or classes. This gives us a poor man's
+sandbox.</p>
+
+<p>``` js
+function poorMansSandbox() {</p>
+
+<pre><code>// arguments[0] is the code string to be evaluated in the sandbox.
+// "allowed" contains all the permitted symbols for the code. (This is
+// an incomplete list.)
+var allowed = { "eval":     true
+              , "Math" :    true
+              , "Object":   true
+              , "Array":    true
+              , "Function": true
+              , "String":   true
+              , "Date":     true
+              , "Number":   true
+              };
+
+// "inScope" contains all the visible definitions for the code.
+// Make sure the symbols "inScope" and "allowed" are themselves not visible.
+var inScope = { inScope: undefined
+              , allowed: undefined 
+              , poorMansSandbox: undefined
+              };
+
+// We need to run the eval in a separate function scope with
+// a properly bound "this" because otherwise "this" will be
+// the "window" object and all our efforts will have been in vain.
+// We make "this" the scope object itself (i.e. "inScope")
+return (function () {
+    Object.getOwnPropertyNames(window).forEach(function (g) {
+        if (!allowed[g]) {
+            inScope[g] = undefined;
+        }
+    });
+    with (inScope) {
+        return eval(arguments[0]);
+    }
+}).call(inScope, arguments[0]);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Though this prevents access to existing global properties, it doesn't prevent
+access to properties that will be added to <code>window</code> <em>after</em> the <code>eval</code> happens.</p>
+
+<h2>Conclusion</h2>
+
+<p><code>eval</code> should be used with tons of caution. However, if you're interested in
+making DSLs around Javascript, it helps to know its workings a bit deeper.
+Remember - there is always something "good" in every "evil" ;)</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Toy language using j-expressions]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions/"/>
+    <updated>2012-04-30T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions</id>
+    <content type="html"><![CDATA[<p>Posted a "stream of thought" compiler for a toy language based
+on the idea of j-expressions as a representation for ASTs.</p>
+
+<ul>
+<li><a href="http://github.com/srikumarks/jexpr">Code</a></li>
+<li><a href="http://srikumarks.github.com/jexpr">Docs</a></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[J-expressions]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/04/15/j-expressions/"/>
+    <updated>2012-04-15T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2012/04/15/j-expressions</id>
+    <content type="html"><![CDATA[<p><a href="http://www.json.org">JSON</a> has become a kind of de-facto standard for sharing data among services
+on the web. The Lisp folks have enjoyed this luxury ever since ... well ever
+since McCarthy made the language and his student implemented an interpreter for
+it. What's more, they have also had the luxury of using the same syntax for
+sharing <em>logic</em> .. and in fact take it for granted. This post is a proposal to
+bring that "luxury" to the web programming world.</p>
+
+<p><strong>Status:</strong> Draft. Comments welcome. (Included file 'hnsubmit' not found in _includes directory)</p>
+
+<h2>Why is it useful to be able to share logic?</h2>
+
+<p>If you've already bought into Lisp, you may not need much convincing here.  If
+you do ask that question, I've written about <a href="/gyan/2012/04/14/creating-dsls-in-javascript-using-j-expressions">DSLs and J-expressions</a> in an
+earlier post that may be of interest to you.</p>
+
+<h2>Core syntax</h2>
+
+<ol>
+<li><p>A "J-expression" is an ordinary JSON-serializeable <strong>object</strong>, whose "first
+key" is taken to name an "operator", with the whole object serving as its
+"operand".</p></li>
+<li><p>A J-expression's key <strong>must</strong> be an identifier conforming to the following
+regular expression</p>
+
+<pre><code> (Letter|$|_)(Letter|DecimalDigit|$|_)*
+</code></pre></li>
+<li><p>We permit an extension to JSON whereby the key <strong>need not</strong> be a <em>quoted</em>
+string.  Nevertheless, a key <strong>must</strong> conform to the above regular expression
+even when quoted.</p></li>
+<li><p>Everything else -- numbers, strings, dates and arrays -- is just as
+specified in <a href="http://www.json.org">JSON</a>.</p></li>
+<li><p>We leave the question of how the "operator" must use the operands open in
+order to allow for eager and lazy computations, and meta-expressions.</p></li>
+<li><p>Every J-expression <strong>may</strong> have a <code>comment</code> key whose value is for human
+consumption and is therefore expected to have nil impact on the meaning of
+the expression to a program.  It <strong>may</strong> therefore be ignored by parsers
+and interpreters. J-expression writers, however, <strong>must</strong> strip out these
+comment fields before serializing these expressions. This means <code>comment</code>
+is a "reserved key".</p></li>
+<li><p>Every J-expression <strong>may</strong> have a <code>meta</code> key whose value is a <a href="http://www.json.org">JSON</a> value
+and is considered of some relevance to the system processing the script.
+This could include additional documentation references, version information,
+source URL for a specification of the operator, etc.  ..  the structure of
+which is left unspecified. J-expression writers, therefore, <strong>must not</strong>
+strip out the <code>meta</code> entry. This means <code>meta</code> is a "reserved key".</p></li>
+</ol>
+
+
+<h4>An example</h4>
+
+<p>``` js</p>
+
+<pre><code>{do: [
+    {fetchURL: "http://some.data.source/",
+      timeout: 30.0,
+       onfail: {raiseError: "URL not reachable"}},
+    {fork: [
+        {displayInElement: "element_id"},
+        {cacheInLocalStorage: "prefix"}
+        ]}]}
+</code></pre>
+
+<p>```</p>
+
+<p>The above script can be read as representing a "pipe" where the
+data is fetched from some URL and then (concurrently) displayed
+in an element and cached in local storage.</p>
+
+<h3>Some considerations</h3>
+
+<ol>
+<li><p>J-expression parsers are expected to be support both quoted and
+unquoted keys in order to enable "logic" and "data" to take the
+same form.</p></li>
+<li><p>J-expression writers are also allowed to use either form, but writing
+unquoted keys is preferred since it is more compact than quoted keys and
+closer in form to the notion of "programming" or "scripting".</p></li>
+</ol>
+
+
+<h4>The "first key" as the "operator"</h4>
+
+<p>Javascript implementations today preserve the order in which keys are inserted
+into objects when traversing keys as long as the keys are not array indices.
+Even when the specification does not require them to do so, Google considers it
+a de-facto standard that insertion and enumeration order must match whenever
+only string keys are involved - as noted in this <a href="http://code.google.com/p/v8/issues/detail?id=164">V8 bug</a>. This de-facto
+standard permits easy identification of the "first key" in a JSON expression as
+shown below --</p>
+
+<p>``` js</p>
+
+<pre><code>function jexpr_operator(jexpr) {
+    for (var first_key in jexpr) {
+        return first_key;
+    }
+}
+</code></pre>
+
+<p>```</p>
+
+<p>In languages such as <a href="http://www.python.org">Python</a>, <a href="http://ruby-lang.org">Ruby</a> and <a href="http://www.lua.org">Lua</a>, we cannot assume that the
+first key can be so easily identified, but since all these languages have
+custom syntax checking parsers for scanning JSON, it is a trivial extension to
+the parser to add a special key to an object to help identify the first key.</p>
+
+<blockquote><p>The key <code>__jexpr_operator__</code> is reserved for parsers so that they can
+indicate what the "first key" is by giving its name as the value of this key.
+For the rest of the system, the presence of this key overrides any key order
+already obeyed by the system. J-expression writers must use this key to
+determine which key to write first, but <strong>must not</strong> output this key itself.</p></blockquote>
+
+<p>Parsers in languages with objects that do not preserve identity between key
+insertion and enumeration order can add a small bit of logic to insert the
+above special key.</p>
+
+<p>``` js</p>
+
+<pre><code>function jexpr_operator(jexpr) {
+    if ("__jexpr_operator__" in jexpr) {
+        return jexpr.__jexpr_operator__;
+    } else {
+        for (var first_key in jexpr) {
+            return first_key;
+        }
+    }
+}
+</code></pre>
+
+<p>```</p>
+
+<p>Beyond this, we do not need the order of the other keys to be preserved and
+operator implementations should not make that assumption.</p>
+
+<h2>Can we build programming languages using j-expressions?</h2>
+
+<p>It sure looks possible to do so. For example, here is a (toy) compiler for
+<a href="https://github.com/srikumarks/jexpr">J a Scheme-like language</a> that is about as expressive as Scheme .. except for the
+lack of support for tail call elimination.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Creating DSLs in Javascript using J-expressions]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/"/>
+    <updated>2012-04-14T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions</id>
+    <content type="html"><![CDATA[<p>Scheme and Lisp have for long had powerful meta-programming abilities due to
+the syntax of their language being the same as the syntax for the main data
+structure supported by the language - the humble list. These languages are
+therefore well suited for inventing smaller special purpose "domain specific
+languages.</p>
+
+<p>Javascript, on the other hand, has a "full blown syntax" that makes
+meta-programming not for the faint of heart. One consequence of the lack of
+such ability is that developers have not had the benefit of the abstraction
+possible through small special purpose DSLs.</p>
+
+<p>Here, I outline an approach for creating DSLs in Javascript using the now
+prevalent <a href="http://www.json.org">JSON</a> format that is native to the language. The initial part tries
+to explain the kinds of scenarios in which one might consider building a DSL,
+which is important to have an idea about. Later, I get into the actual
+representation using JSON.</p>
+
+<h2>When to make a DSL? .. or "Hunting of the Closure".</h2>
+
+<p>Under normal circumstances, you should consider developing your abstractions as
+"modules". Modules (or "libraries") offer basic encapsulation and hiding
+facilities that JS developers are familiar with. You can help them benefit from
+your work by leveraging that familiarity.</p>
+
+<p>On the rare occasion though, you might find yourself writing code that starts
+looking like a small "compiler"  or "runtime". In such circumstances, creating
+a DSL for that part of the system might be worthwhile to consider -- the purpose,
+again, being that it might ease the job of those that your package targets.</p>
+
+<p>A tipping point can happen when you discover that you are working with a
+category of objects that are "closed over" a suite of operations.  In
+mathematics, a set of objects is said to be "closed" with respect to a function
+if the function maps objects of the set to other objects in the same set and we
+say the set "has the closure property". But before we get to why that's
+significant, let's take a quick look at a simple example.</p>
+
+<h3>The "closure property" - an example</h3>
+
+<p>Say we want a framework to create and render visuals that vary in time -- like,
+maybe, umm ... a video? Here is a simple representation of such a visual, which
+we'll call a "show"  -</p>
+
+<p>``` js
+function show(t) {</p>
+
+<pre><code>// calculate...
+return image;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Given such a "show", it is trivial to write a renderer for it -</p>
+
+<p>``` js
+function render(show, duration_ms) {</p>
+
+<pre><code>var startTime_ms = Date.now();
+requestAnimationFrame(function () {
+    var t = Date.now() - startTime_ms;
+    context.draw(show(t));
+    if (t &lt; duration_ms) {
+        requestAnimationFrame(arguments.callee);
+    }
+});
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Now, I want an operator which will delay a given show by a specified amount
+of time. Simple -</p>
+
+<p>``` js
+function delay(show, dt_ms) {</p>
+
+<pre><code>return function (t) {
+    return show(t - dt_ms);
+};
+</code></pre>
+
+<p>}
+```</p>
+
+<p>How about a "cut" from one show to another at a given time. Also simple -</p>
+
+<p>``` js
+function cut(when, show1, show2) {</p>
+
+<pre><code>return function (t) {
+    return (t &lt; when ? show1 : show2)(t);
+};
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Now, if we represent video clips using such <code>show</code>s, those two functions under
+which the set of <code>show</code>s is closed give us all we need to make an edited
+production .... because we can combine them.  Note that <code>delay</code> takes a show
+and produces a show, and so does <code>cut</code> ... which takes <em>two</em> shows, yes, but
+that's the same idea. This kind of combinatorial power is valuable when
+modelling a domain.</p>
+
+<blockquote><h5>ShowTime</h5>
+
+<p>The interface to <a href="http://www.muvee.com">muvee Reveal</a>'s rendering engine "ShowTime" is built
+around this kind of an abstraction. The details of <a href="http://muvee-style-authoring.googlecode.com/svn/doc/main/ShowTime_-_the_muvee_timeline.html">ShowTime</a> and the DSL for
+<a href="http://muvee-style-authoring.googlecode.com">authoring muvee's "styles"</a> built on top of this API are available publicly.
+In this case, the DSL abstracts away implementation details such as the deep
+nesting of functions that might result in a naive implementation.</p></blockquote>
+
+<h2>Functions are closed under composition</h2>
+
+<p>Here is what makes the closure property worth hunting for --</p>
+
+<blockquote><p>When you have several functions under which your set is closed, it is also
+closed under <em>arbitrary compositions</em> of these functions.</p></blockquote>
+
+<p>So, well, why bother with a DSL? Why not just use function composition?  One
+reason is that, in the real world, your set is closed with respect to each of
+these functions <em>only under certain constraints</em>. These constraints might make
+it difficult to predict whether a given composition of these functions is a
+valid operation in your domain. You will need to validate a composition
+<em>before</em> you begin to act on it, which becomes difficult if you only have
+access to the composition and not the parts. A DSL that abstracts over these
+constraints by exposing only that subset of compositions that are valid in the
+domain would therefore be of great help to people reusing your work.</p>
+
+<blockquote><p>The DSL's purpose, then, is to hide the constraints under which closure is
+possible and composition operations are valid - i.e. where composition and
+use are context sensitive.</p></blockquote>
+
+<h2>A DSL for asynchronous operations</h2>
+
+<p>Let's consider an example where having a DSL seems beneficial - composing
+asynchronous operations.</p>
+
+<p>It is a common convention for a function that does some asynchronous action to
+accept "callback" and "errback" functions to call when it succeeds or fails
+respectively.  Composing such actions into sequences soon turns into what is
+usually referred to as "callback hell" and the person reading the source soon
+looses sight of the whole flow of control.</p>
+
+<p>So, do we satisfy our "DSL criteria" here?</p>
+
+<ol>
+<li>Closure property? CHECK. A sequence of operations is itself an operation.</li>
+<li>Constraints? CHECK. A sequence is allowed to proceed normally only when an
+operation doesn't fail. There are many error handling strategies when an
+operation fails and we may not have seen all of them yet.</li>
+</ol>
+
+
+<p>Let's then make a small DSL for sequencing asynchronous operations.</p>
+
+<h2>Representing asynchronous operations</h2>
+
+<p>First we're going to need a way to define new asynchonous operations
+in plain Javascript for our "primitives". A simple representation is
+to model an async operation (let's call them "asop"s for convenience)
+as a function that takes a specific set of arguments as follows --</p>
+
+<p>``` js
+function asop(M, input, success, failure) {</p>
+
+<pre><code>// ...
+// we're good.
+M.start(success, input, M.end, M.failure);
+
+// Something bad happened
+M.start(failure, M.error("bad", input, success, failure), M.end, M.end);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>The function takes four parameters -</p>
+
+<ol>
+<li><code>M</code> is a module that provides facilities for starting an asop --
+<code>M.start</code> and a terminal operation <code>M.end</code> that does nothing and stops all
+processing.</li>
+<li><code>input</code> is the data being passed to the asop to do its job.</li>
+<li><code>success</code> is an asop to start once this asop finishes
+successfully.</li>
+<li><code>failure</code> is an asop to start if this asop cannot be completed for
+some reason.</li>
+</ol>
+
+
+<blockquote><p>Note that an asop is recursively defined in terms of and makes use of two
+other asops <code>success</code> and <code>failure</code>, which themselves have the <em>same</em>
+function signature.</p></blockquote>
+
+<p>We take <code>M.error</code> to be a utility that produces an error object that captures
+the current error state to pass to the failure operation. Here is a simple
+definition for <code>M</code> --</p>
+
+<p>``` js
+M.start = function (op, input, succ, fail) {</p>
+
+<pre><code>setTimeout(function () {
+    op(M, input, succ, fail);
+}, 0);
+</code></pre>
+
+<p>};
+M.error = function (descr, input, succ, fail) {</p>
+
+<pre><code>return new Error({descr: descr, input: input, success: succ, failure: fail});
+</code></pre>
+
+<p>},
+M.end = function () {};
+```</p>
+
+<h2>Sequencing two operations</h2>
+
+<p>Since our operations are ordinary functions, we can write a "sequencing operator"
+for combining two operations as a higher order function as follows --</p>
+
+<p>``` js
+function seq(first, next) {</p>
+
+<pre><code>return function (M, input, success, failure) {
+    M.start(first, input, seq(next, success), failure);
+};
+</code></pre>
+
+<p>}
+```</p>
+
+<p><em>Note</em>: This looks like infinite recursion, but it will terminate automatically
+when <code>M.end</code> is passed for <code>next</code> because, we define <code>M.end</code> to be the operation
+that doesn't continue further.</p>
+
+<h2>Making a chain of operations</h2>
+
+<p>The humble <code>seq</code> operator can now be put to use to chain an arbitrary
+number of operations given as an array ---</p>
+
+<p>``` js
+function chain(operations) {</p>
+
+<pre><code>var revOps = operations.slice(0).reverse();
+return function (M, input, success, failure) {
+    M.start(revOps.reduce(seq, success), input, M.end, failure);
+};
+</code></pre>
+
+<p>}
+```</p>
+
+<h2>Umm ... why do we need a DSL again?</h2>
+
+<p>You'd be right in asking that question. So far, it looks like the language is
+expressive enough to let us code up all these compositions using plain higher
+order functions. So, let me throw something into the mix that might cause you
+to stumble if you think such functions alone are adequate.</p>
+
+<p>Consider the exchanges that happen between a web server and a client (browser).
+A client instructs a web server to perform some operation, the server gets back
+when done, or with progress notifications, then the client does a few async things
+like store some data locally, and then makes the next request and so on. The ability
+to represent a <em>sequence</em> of actions directly is a boon to take care of all these
+exchanges happening between these two dance partners.</p>
+
+<blockquote><h3>So here is your task - ###</h3>
+
+<p>Abstract away the transaction to survive a termination of connection with the
+server. I'm not talking packet loss here.  I'm talking about the user
+initiating a series of operations and in the middle of things shutting down
+the browser. What I want to happen is for the operations to continue exactly
+from wherever they left off -- because I cannot "throw an exception" and undo
+a rocket launch. If the client was waiting for a response from the server, it
+should again start waiting for that response; and by implication if the
+server was doing something and found out that the connection had terminated
+at the "next" step, it should've stored away whatever it needed to do to
+continue, and must resume that when the user connects again, maybe after some
+mild handshaking. In particular, it is <em>not</em> acceptable to terminate the
+operation sequence just because the browser was closed.</p></blockquote>
+
+<p>Trying to do something like this is where reifying processes as functions
+breaks down. To a lisp/scheme programmer, a solution would already be in sight
+-- use s-expressions to represent operations and store away instructions in
+that form. What might we do in the Javascript world?</p>
+
+<h2>J expressions</h2>
+
+<p>The image I have in my mind now is Douglas Crockford standing with legs apart,
+arms folded, cape flying with a speech bubble pointing to his head saying
+"JSON to the rescue!".</p>
+
+<p>Since we have our framework taking care of coordinating the success and failure
+of operations, all it takes to <em>specify</em> an operation, given a known set of
+named "primitive" operations, are the following --</p>
+
+<ol>
+<li>The <em>name</em> of the operation to start.</li>
+<li>An <em>input</em> object to customize any details of the operation.</li>
+</ol>
+
+
+<p>So, there you go, we can change our representation of an operation from being
+a function to something that looks like -</p>
+
+<p><code>js
+{opname: input_object}
+</code></p>
+
+<p>(Technically, that'll be <code>{"opname": input_object}</code> in JSON, but let's ignore
+that difference since it is <em>serializable</em> using JSON, which is what's
+important.)</p>
+
+<p>The input object is also a literal or computed <em>value</em> which we restrict to
+JSON-serializable values. The named primitive operation can itself be provided
+in a module as a function that takes the whole spec object and does what it is
+supposed to do.</p>
+
+<p>We can now specify a series of operations as an array in this form -</p>
+
+<p>``` js
+{do: [</p>
+
+<pre><code>{ask: "Enter file name: ", 
+    type: "file"},
+{fetchFile: {showProgress: "progress_bar"},
+    reportInterval: 1.0},
+{spawn: {withRetry: {uploadToDropbox: {user: "cat", password: "meow"}},
+            maxTries: 5,
+              onfail: {do: [
+                        {deleteTempFiles: null},
+                        {ask: "Dropbox upload failed. Try again?", 
+                            type: "yes/no",
+                             yes: {retry: true},
+                              no: {raise: "Give up"}}
+                        ]}}},
+{cacheInLocalStore: "prefix"},
+{showInElement: "element_id"}
+</code></pre>
+
+<p>]}
+```</p>
+
+<p>If we are given the primitive operations as members of a module <code>M</code>, we can run
+a primitive operation as follows -</p>
+
+<p>``` js
+function runPrimitiveOperation(opspec) {</p>
+
+<pre><code>return function (M, input, success, failure) {
+    for (var opname in opspec) {
+        M[opname](M, opspec, input, success, failure);
+        return;
+    }
+};
+</code></pre>
+
+<p>}
+```</p>
+
+<blockquote><h4>Note</h4>
+
+<p>Here I'm making use of the fact that JS engines today such as V8 always
+enumerate the keys of an object in the order in which they were added to it.
+This is what lets us identify the <em>first</em> key as determining the operation to
+start with the operation implementation knowing what to make of the other
+keys in the expression, the parameters and so on.</p>
+
+<p>Also note that we've put in a pipeline here -- i.e. <code>ask</code> gets a file name
+that it passes as input to <code>fetchFile</code> which passes the fetched file data to
+<code>spawn</code>, and so on. <code>spawn</code> is a higher order operation, since it takes an
+operation as the argument to perform concurrently, while continuing by
+passing its input through to <code>cacheInLocalStore</code>.</p></blockquote>
+
+<p>Our framework, then, serves as an interpreter for this mini language, providing
+the necessary abstractions on <em>how</em> we expect these operations to be executed
+behind the scenes. What is important is that <em>users</em> of our framework are not
+forced to think about browser shutdown/restart cases and can simply assume
+that the infrastructure we provide will "do the right thing".</p>
+
+<p>Now, I'm not going to go into details of what one actually needs to do to
+<em>implement</em> the shutdown/restart behaviour, but at this point, it ought to be
+clear enough that given a serializable representation of "operations still left
+to do" and a serializable representation of the input to give to this sequence,
+we can dump both at any point to disk (plus some book keeping info) and resume
+after a browser/server restart. We'll need to do that for <em>each task sequence</em>
+that's active at the point the shutdown is initiated.</p>
+
+<p>The important thing is that the one writing the script can focus on writing the
+script instead of the operational details.</p>
+
+<h2>Recap</h2>
+
+<p>The main takeaways from this post are the following -</p>
+
+<ol>
+<li><p>If you find categories of objects in your problem domain that are closed
+over a number of functions and you want to abstract away the constraints
+under which those functions can be combined, you may find it useful to
+create a DSL for your domain.</p></li>
+<li><p>The consistent implementation of key enumeration order of objects in
+Javascript engines allows us to write <strong>specifications of composeable
+computations</strong> using generic JSON-serializable notation that we can call
+"J-expressions".</p>
+
+<pre><code>{opname: main_parameter,
+    keyword1: value1,
+    keyword2: value2,
+    ...}
+</code></pre></li>
+<li><p>J-expressions, in combination with functions that implement what the
+operation named "opname" is supposed to do, are then a systematic way to
+approach DSL construction within Javascript.  The notation is as expressive
+as s-expressions. For instance, here is a way to write a "higher order
+asop" :)</p>
+
+<pre><code>{lambda_the_ultimate: ["arg"],
+    do: [
+        {step1: ..},
+        {step2: ..}
+    ]}
+</code></pre></li>
+</ol>
+
+]]></content>
+  </entry>
+  
+</feed>
