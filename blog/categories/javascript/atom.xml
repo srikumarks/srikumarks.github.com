@@ -4,7 +4,7 @@
   <title><![CDATA[Category: javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-21T11:15:33+05:30</updated>
+  <updated>2012-12-21T12:53:14+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -446,7 +446,7 @@ it. What's more, they have also had the luxury of using the same syntax for
 sharing <em>logic</em> .. and in fact take it for granted. This post is a proposal to
 bring that "luxury" to the web programming world.</p>
 
-<p><strong>Status:</strong> Draft. Comments welcome. (Included file 'hnsubmit' not found in _includes directory)</p>
+<p><strong>Status:</strong> Draft. Comments welcome.</p>
 
 <h2>Why is it useful to be able to share logic?</h2>
 
