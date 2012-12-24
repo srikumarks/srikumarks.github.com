@@ -4,7 +4,7 @@
   <title><![CDATA[Category: javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-21T12:54:12+05:30</updated>
+  <updated>2012-12-24T15:30:19+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[A critique of Tuna]]></title>
     <link href="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/"/>
-    <updated>2012-11-09T00:00:00+05:30</updated>
+    <updated>2012-11-09T00:00:00+08:00</updated>
     <id>http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna</id>
     <content type="html"><![CDATA[<p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
 project. Here, I collect some thoughts about the code design decisions for their
@@ -97,7 +97,7 @@ approach is much more suitable in this situation.</p>
   <entry>
     <title type="html"><![CDATA[On eval and evil.]]></title>
     <link href="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/"/>
-    <updated>2012-08-28T00:00:00+05:30</updated>
+    <updated>2012-08-28T00:00:00+08:00</updated>
     <id>http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil</id>
     <content type="html"><![CDATA[<p>"eval is evil" has become a maxim repeated in the Javascript community.
 Douglas Crockford, in <a href="http://shop.oreilly.com/product/9780596517748.do">Javascript: The Good Parts</a>, rightly advises against
@@ -421,7 +421,7 @@ Remember - there is always something "good" in every "evil" ;)</p>
   <entry>
     <title type="html"><![CDATA[Toy language using j-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions/"/>
-    <updated>2012-04-30T00:00:00+05:30</updated>
+    <updated>2012-04-30T00:00:00+08:00</updated>
     <id>http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions</id>
     <content type="html"><![CDATA[<p>Posted a "stream of thought" compiler for a toy language based
 on the idea of j-expressions as a representation for ASTs.</p>
@@ -437,7 +437,7 @@ on the idea of j-expressions as a representation for ASTs.</p>
   <entry>
     <title type="html"><![CDATA[J-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/15/j-expressions/"/>
-    <updated>2012-04-15T00:00:00+05:30</updated>
+    <updated>2012-04-15T00:00:00+08:00</updated>
     <id>http://srikumarks.github.com/blog/2012/04/15/j-expressions</id>
     <content type="html"><![CDATA[<p><a href="http://www.json.org">JSON</a> has become a kind of de-facto standard for sharing data among services
 on the web. The Lisp folks have enjoyed this luxury ever since ... well ever
@@ -584,7 +584,7 @@ lack of support for tail call elimination.</p>
   <entry>
     <title type="html"><![CDATA[Creating DSLs in Javascript using J-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/"/>
-    <updated>2012-04-14T00:00:00+05:30</updated>
+    <updated>2012-04-14T00:00:00+08:00</updated>
     <id>http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions</id>
     <content type="html"><![CDATA[<p>Scheme and Lisp have for long had powerful meta-programming abilities due to
 the syntax of their language being the same as the syntax for the main data

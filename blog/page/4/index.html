@@ -99,7 +99,7 @@ on the web. The Lisp folks have enjoyed this luxury ever since &#8230; &hellip;"
   
 
 
-<time datetime="2012-04-15T00:00:00+05:30" pubdate data-updated="true">Apr 15<span>th</span>, 2012</time>
+<time datetime="2012-04-15T00:00:00+08:00" pubdate data-updated="true">Apr 15<span>th</span>, 2012</time>
         
          | <a href="/blog/2012/04/15/j-expressions/#disqus_thread">Comments</a>
         
@@ -304,6 +304,35 @@ lack of support for tail call elimination.</p>
       </li>
     
   </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  
+  <a href="https://github.com/srikumarks">@srikumarks</a> on GitHub
+  
+  <script type="text/javascript">
+    $.domReady(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'srikumarks',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
 </section>
 
 
