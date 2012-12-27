@@ -9,8 +9,8 @@
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="Google has open sourced the Tuna set of effects used in their Jam with Chrome
-project. Here, I collect some thoughts about the code design decisions &hellip;">
+  <meta name="description" content="Scheme and Lisp have for long had powerful meta-programming abilities due to
+the syntax of their language being the same as the syntax for the main &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,7 +83,7 @@ project. Here, I collect some thoughts about the code design decisions &hellip;"
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2012/11/09/a-critique-of-tuna/">A Critique of Tuna</a></h1>
+      <h1 class="entry-title"><a href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">Creating DSLs in Javascript Using J-expressions</a></h1>
     
     
       <p class="meta">
@@ -99,117 +99,264 @@ project. Here, I collect some thoughts about the code design decisions &hellip;"
   
 
 
-<time datetime="2012-11-09T00:00:00+08:00" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
+<time datetime="2012-04-14T00:00:00+08:00" pubdate data-updated="true">Apr 14<span>th</span>, 2012</time>
         
-         | <a href="/blog/2012/11/09/a-critique-of-tuna/#disqus_thread">Comments</a>
+         | <a href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/#disqus_thread">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
-project. Here, I collect some thoughts about the code design decisions for their
-effects framework, since I myself have written <a href="http://github.com/srikumarks/steller">Steller</a>.</p>
+  <div class="entry-content"><p>Scheme and Lisp have for long had powerful meta-programming abilities due to
+the syntax of their language being the same as the syntax for the main data
+structure supported by the language - the humble list. These languages are
+therefore well suited for inventing smaller special purpose &#8220;domain specific
+languages.</p>
 
-<h2>Parameters</h2>
+<p>Javascript, on the other hand, has a &#8220;full blown syntax&#8221; that makes
+meta-programming not for the faint of heart. One consequence of the lack of
+such ability is that developers have not had the benefit of the abstraction
+possible through small special purpose DSLs.</p>
 
-<p>In Tuna, the effects module&#8217;s parameters are presented to the API user as
-object properties and implemented using getters and setters. This is obviously
-simple from the perspective of a module user. However, it has several disadvantages -</p>
+<p>Here, I outline an approach for creating DSLs in Javascript using the now
+prevalent <a href="http://www.json.org">JSON</a> format that is native to the language. The initial part tries
+to explain the kinds of scenarios in which one might consider building a DSL,
+which is important to have an idea about. Later, I get into the actual
+representation using JSON.</p>
 
-<p>If a module contains another module and you want to expose that parameter,
-you&#8217;re forced to write another getter/setter to handle the indirection. Such
-parameters cannot be passed around &#8220;by reference&#8221;. The only thing you can
-do with them is to set/get their values. &#8220;By reference&#8221; passing is a simple
-way to expose an internal module&#8217;s parameters to the module user which is an
-important kind of composability.</p>
-
-<p>Owing to the getter/setter approach, meta information about parameters such as
-their range, defaults, automation capabilities, etc. need to be stored elsewhere
-in a &#8220;defaults&#8221; object, instead of being directly associated with them.</p>
-
-<p>In some of the effects, some internal values and other parameters need to be
-recomputed when a couple of parameters change. In this case, the code for
-updating the dependent parameters is duplicated since it is not particularly
-convenient to write a shared function local when defining parameters using
-<code>Object.create</code> like this -</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="c1">//...</span>
-</span><span class='line'><span class="nx">baseFrequency</span><span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>    <span class="nx">enumerable</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
-</span><span class='line'>    <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span><span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span><span class="p">},</span>
-</span><span class='line'>    <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">=</span> <span class="mi">50</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="nx">value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">baseFrequency</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">));</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterBp</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterPeaking</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'><span class="p">},</span>
-</span><span class='line'><span class="nx">excursionOctaves</span><span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>    <span class="nx">enumerable</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
-</span><span class='line'>    <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span><span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">},</span>
-</span><span class='line'>    <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span> <span class="o">=</span> <span class="nx">value</span><span class="p">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">baseFrequency</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">));</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterBp</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterPeaking</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'><span class="p">},</span>
-</span><span class='line'><span class="c1">//...</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>A simpler way to solve this would be to have parameters be first class objects
-that can be inspected, instead of just accessing and setting their values. Meta
-data about them can travel along with them. In <a href="http://github.com/srikumarks/steller">Steller</a>, watcher functions can
-be installed on parameters run code when the parameter&#8217;s value changes.</p>
-
-<h2>Inheritance using the <code>prototype</code> mechanism</h2>
-
-<p>One of the code design choices that vastly complicates the code in this case
-is the choice of using <code>prototype</code> based inheritance to define the properties
-of instantiated effects modules. While this is common in the JS world,
-in this case it deprives the programmer of a local context in which to hide
-internal objects from the effects module&#8217;s user and to write shared private
-code like in the case above. Any potential loss of efficiency in not using
-the prototype mechanism for this application is insignificant since object
-creation is not the thing we should be optimising for.</p>
-
-<p>The &#8220;define all methods and properties within the constructor function&#8221;
-approach is much more suitable in this situation.</p>
 </div>
   
+  
+    <footer>
+      <a rel="full-article" href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/04/13/a-mental-model-for-variables-and-closures-in-javascript/">A Mental Model for Variables and Closures in Javascript</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-13T00:00:00+08:00" pubdate data-updated="true">Apr 13<span>th</span>, 2012</time>
+        
+         | <a href="/blog/2012/04/13/a-mental-model-for-variables-and-closures-in-javascript/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Closures and variables have a strained relationship in Javascript that causes
+much confusion among newcomers and results in hard to spot bugs even for
+experienced JS coders. It is good to have a clear and accurate &#8220;mental model&#8221;
+of this relationship using which you can correctly predict what would happen
+with any given piece of code.</p>
+
+<p>I came up with such a mental model a while back and posted it on <a href="http://news.ycombinator.com/item?id=2688438">Hacker News</a>
+&#8230; which I reproduce here.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2012/04/13/a-mental-model-for-variables-and-closures-in-javascript/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/04/12/classes-and-javascript/">Classes and Javascript</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-12T00:00:00+08:00" pubdate data-updated="true">Apr 12<span>th</span>, 2012</time>
+        
+         | <a href="/blog/2012/04/12/classes-and-javascript/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>If you have been programming in Java and C++ for a while and are used to
+thinking about problems in terms of classes and inheritance, you may find
+yourself struggling with Javascript since it has only objects.  This post is to
+&#8211; a) provide you with a perspective on why programming with only objects is
+powerful and b) show you how to translate the class-based concepts you&#8217;re used
+to thinking in into the Javascript world.</p>
+
+<p>The Javascript object system comes from the language <a href="http://en.wikipedia.org/wiki/Self_(programming_language)">Self</a> which pioneered
+object oriented modeling using prototypes, along with many dynamic compilation
+techniques that later went into the HotSpot JVM. The motivation for destroying
+the class-object dichotomy is that working with classes forces you to think
+about object categories well before you&#8217;ve really understood the problem
+domain.  The claim by the Self folks is that your approximate and often
+downright invalid classes get frozen in over time and the system becomes harder
+to adapt to changes in understanding about the problem being modelled.</p>
+
+<p>So, what <em>are</em> classes? &#8230; really?</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2012/04/12/classes-and-javascript/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/03/social-hash-as-identity/">Social Hash as Identity</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-03T00:00:00+08:00" pubdate data-updated="true">Jan 3<span>rd</span>, 2012</time>
+        
+         | <a href="/blog/2012/01/03/social-hash-as-identity/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>(This is a &#8220;brain-dump&#8221; post).</p>
+
+<p>Many write-ups and studies on social networks and privacy issues talk about the
+risk of using one’s personal information disclosed within social networks for
+identity theft. That made me think about whether it is really possible for an
+identity thief to steal my entire social environment and history or whether
+such theft is simply an indication of how broken the current paper-world
+identity systems are in the digital age?</p>
+
+<p>Enter the “social hash” – a short identification string that can be generated
+from the data in your social network’s history that is very highly likely to be
+unique to you and very difficult to duplicate in a &#8220;prove your identity&#8221;
+challenge.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2012/01/03/social-hash-as-identity/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/">Newcomb&#8217;s Problem and Quantum Physics</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-05-07T00:00:00+08:00" pubdate data-updated="true">May 7<span>th</span>, 2011</time>
+        
+         | <a href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>How would <a href="http://lesswrong.com/lw/nc/newcombs_problem_and_regret_of_rationality/">Newcomb&#8217;s problem</a> look like in the physical world, taking quantum
+physics into account? Specifically, would Omega need to know quantum physics in
+order to predict my decision on &#8220;to one box or not to one box&#8221;?</p>
+
+<p>To simplify the picture, imagine that Omega has a variable with it that can be
+either in the state A+B or B and which is expected to correlate with my
+decision and therefore serves to &#8220;predict&#8221; me. Omega runs some physical process
+to arrive at the contents of this variable. I&#8217;m assuming that &#8220;to predict&#8221;
+means &#8220;to simulate&#8221; - i.e. Omega can predict me by running a simulation of me
+(say using a universal quantum Turing machine) though that is not necessarily
+the only way to do so. Given that we&#8217;re in a quantum world, would Omega
+actually need to simulate me in order to ensure a correlation between its
+variable and my choice, potentially in another galaxy, of whether to pick A+B
+or B?</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/">Read on &rarr;</a>
+    </footer>
   
 
 
     </article>
   
   <div class="pagination">
-    
-      <a class="prev" href="/blog/page/3/">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     

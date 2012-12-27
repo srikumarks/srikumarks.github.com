@@ -4,7 +4,7 @@
   <title><![CDATA[Category: javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-27T10:28:18+08:00</updated>
+  <updated>2012-12-27T10:53:09+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -51,6 +51,9 @@ Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
     <content type="html"><![CDATA[<p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
 project. Here, I collect some thoughts about the code design decisions for their
 effects framework, since I myself have written <a href="http://github.com/srikumarks/steller">Steller</a>.</p>
+
+<!-- more -->
+
 
 <h2>Parameters</h2>
 
@@ -136,6 +139,9 @@ hidden and explicit uses of eval for security and clarity reasons. Now, I find
 compiler wouldn't be possible without <code>eval</code> (directly or indirectly). So, in
 this post, I wish to explore what appears interesting about <code>eval</code> that is
 relevant to building such DSLs.</p>
+
+<!-- more -->
+
 
 <p>For this post, I'll stick to the behaviour of <code>eval</code> in the <strong>Chrome</strong> browser
 (i.e. the V8 engine, which also applies to <a href="http://nodejs.org">Node.js</a>). We'll go through a
@@ -477,6 +483,9 @@ sharing <em>logic</em> .. and in fact take it for granted. This post is a propos
 bring that "luxury" to the web programming world.</p>
 
 <p><strong>Status:</strong> Draft. Comments welcome.</p>
+
+<!-- more -->
+
 
 <h2>Why is it useful to be able to share logic?</h2>
 
