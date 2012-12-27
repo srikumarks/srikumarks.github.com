@@ -4,7 +4,7 @@
   <title><![CDATA[Category: javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-24T15:30:19+08:00</updated>
+  <updated>2012-12-27T10:19:19+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -12,6 +12,35 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Scratch pad for text with diacritics]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/"/>
+    <updated>2012-12-27T10:09:00+08:00</updated>
+    <id>http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics</id>
+    <content type="html"><![CDATA[<p>Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can be
+ported between applications is in general a pain. So, I made a small in-browser
+app that serves as [scratch pad for common diacritics].</p>
+
+<h3>Usage</h3>
+
+<p>Straight forward. You just type your text in the provided box using normal
+roman characters first - ex: "Sankarabharanam". Once you've typed that in,
+you select each character to which you want to apply diacritical marks and
+click on the mark you want. You can also press the number key corresponding
+to the diacritical mark you want for the selected character - ex: "Śankarābharṇam".</p>
+
+<p>Your text is automatically saved to local storage, so you can visit the page
+any time and retrieve your text. You'll <em>never</em> lose text you key in.</p>
+
+<h3>Known issues</h3>
+
+<p>This works fine in Chrome and Safari on MacOSX, but not in Firefox. I haven't
+yet figured out why it doesn't work in Firefox. If you find that it works in
+Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[A critique of Tuna]]></title>
@@ -578,440 +607,6 @@ operator implementations should not make that assumption.</p>
 <p>It sure looks possible to do so. For example, here is a (toy) compiler for
 <a href="https://github.com/srikumarks/jexpr">J a Scheme-like language</a> that is about as expressive as Scheme .. except for the
 lack of support for tail call elimination.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Creating DSLs in Javascript using J-expressions]]></title>
-    <link href="http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/"/>
-    <updated>2012-04-14T00:00:00+08:00</updated>
-    <id>http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions</id>
-    <content type="html"><![CDATA[<p>Scheme and Lisp have for long had powerful meta-programming abilities due to
-the syntax of their language being the same as the syntax for the main data
-structure supported by the language - the humble list. These languages are
-therefore well suited for inventing smaller special purpose "domain specific
-languages.</p>
-
-<p>Javascript, on the other hand, has a "full blown syntax" that makes
-meta-programming not for the faint of heart. One consequence of the lack of
-such ability is that developers have not had the benefit of the abstraction
-possible through small special purpose DSLs.</p>
-
-<p>Here, I outline an approach for creating DSLs in Javascript using the now
-prevalent <a href="http://www.json.org">JSON</a> format that is native to the language. The initial part tries
-to explain the kinds of scenarios in which one might consider building a DSL,
-which is important to have an idea about. Later, I get into the actual
-representation using JSON.</p>
-
-<h2>When to make a DSL? .. or "Hunting of the Closure".</h2>
-
-<p>Under normal circumstances, you should consider developing your abstractions as
-"modules". Modules (or "libraries") offer basic encapsulation and hiding
-facilities that JS developers are familiar with. You can help them benefit from
-your work by leveraging that familiarity.</p>
-
-<p>On the rare occasion though, you might find yourself writing code that starts
-looking like a small "compiler"  or "runtime". In such circumstances, creating
-a DSL for that part of the system might be worthwhile to consider -- the purpose,
-again, being that it might ease the job of those that your package targets.</p>
-
-<p>A tipping point can happen when you discover that you are working with a
-category of objects that are "closed over" a suite of operations.  In
-mathematics, a set of objects is said to be "closed" with respect to a function
-if the function maps objects of the set to other objects in the same set and we
-say the set "has the closure property". But before we get to why that's
-significant, let's take a quick look at a simple example.</p>
-
-<h3>The "closure property" - an example</h3>
-
-<p>Say we want a framework to create and render visuals that vary in time -- like,
-maybe, umm ... a video? Here is a simple representation of such a visual, which
-we'll call a "show"  -</p>
-
-<p>``` js
-function show(t) {</p>
-
-<pre><code>// calculate...
-return image;
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Given such a "show", it is trivial to write a renderer for it -</p>
-
-<p>``` js
-function render(show, duration_ms) {</p>
-
-<pre><code>var startTime_ms = Date.now();
-requestAnimationFrame(function () {
-    var t = Date.now() - startTime_ms;
-    context.draw(show(t));
-    if (t &lt; duration_ms) {
-        requestAnimationFrame(arguments.callee);
-    }
-});
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Now, I want an operator which will delay a given show by a specified amount
-of time. Simple -</p>
-
-<p>``` js
-function delay(show, dt_ms) {</p>
-
-<pre><code>return function (t) {
-    return show(t - dt_ms);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<p>How about a "cut" from one show to another at a given time. Also simple -</p>
-
-<p>``` js
-function cut(when, show1, show2) {</p>
-
-<pre><code>return function (t) {
-    return (t &lt; when ? show1 : show2)(t);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Now, if we represent video clips using such <code>show</code>s, those two functions under
-which the set of <code>show</code>s is closed give us all we need to make an edited
-production .... because we can combine them.  Note that <code>delay</code> takes a show
-and produces a show, and so does <code>cut</code> ... which takes <em>two</em> shows, yes, but
-that's the same idea. This kind of combinatorial power is valuable when
-modelling a domain.</p>
-
-<blockquote><h5>ShowTime</h5>
-
-<p>The interface to <a href="http://www.muvee.com">muvee Reveal</a>'s rendering engine "ShowTime" is built
-around this kind of an abstraction. The details of <a href="http://muvee-style-authoring.googlecode.com/svn/doc/main/ShowTime_-_the_muvee_timeline.html">ShowTime</a> and the DSL for
-<a href="http://muvee-style-authoring.googlecode.com">authoring muvee's "styles"</a> built on top of this API are available publicly.
-In this case, the DSL abstracts away implementation details such as the deep
-nesting of functions that might result in a naive implementation.</p></blockquote>
-
-<h2>Functions are closed under composition</h2>
-
-<p>Here is what makes the closure property worth hunting for --</p>
-
-<blockquote><p>When you have several functions under which your set is closed, it is also
-closed under <em>arbitrary compositions</em> of these functions.</p></blockquote>
-
-<p>So, well, why bother with a DSL? Why not just use function composition?  One
-reason is that, in the real world, your set is closed with respect to each of
-these functions <em>only under certain constraints</em>. These constraints might make
-it difficult to predict whether a given composition of these functions is a
-valid operation in your domain. You will need to validate a composition
-<em>before</em> you begin to act on it, which becomes difficult if you only have
-access to the composition and not the parts. A DSL that abstracts over these
-constraints by exposing only that subset of compositions that are valid in the
-domain would therefore be of great help to people reusing your work.</p>
-
-<blockquote><p>The DSL's purpose, then, is to hide the constraints under which closure is
-possible and composition operations are valid - i.e. where composition and
-use are context sensitive.</p></blockquote>
-
-<h2>A DSL for asynchronous operations</h2>
-
-<p>Let's consider an example where having a DSL seems beneficial - composing
-asynchronous operations.</p>
-
-<p>It is a common convention for a function that does some asynchronous action to
-accept "callback" and "errback" functions to call when it succeeds or fails
-respectively.  Composing such actions into sequences soon turns into what is
-usually referred to as "callback hell" and the person reading the source soon
-looses sight of the whole flow of control.</p>
-
-<p>So, do we satisfy our "DSL criteria" here?</p>
-
-<ol>
-<li>Closure property? CHECK. A sequence of operations is itself an operation.</li>
-<li>Constraints? CHECK. A sequence is allowed to proceed normally only when an
-operation doesn't fail. There are many error handling strategies when an
-operation fails and we may not have seen all of them yet.</li>
-</ol>
-
-
-<p>Let's then make a small DSL for sequencing asynchronous operations.</p>
-
-<h2>Representing asynchronous operations</h2>
-
-<p>First we're going to need a way to define new asynchonous operations
-in plain Javascript for our "primitives". A simple representation is
-to model an async operation (let's call them "asop"s for convenience)
-as a function that takes a specific set of arguments as follows --</p>
-
-<p>``` js
-function asop(M, input, success, failure) {</p>
-
-<pre><code>// ...
-// we're good.
-M.start(success, input, M.end, M.failure);
-
-// Something bad happened
-M.start(failure, M.error("bad", input, success, failure), M.end, M.end);
-</code></pre>
-
-<p>}
-```</p>
-
-<p>The function takes four parameters -</p>
-
-<ol>
-<li><code>M</code> is a module that provides facilities for starting an asop --
-<code>M.start</code> and a terminal operation <code>M.end</code> that does nothing and stops all
-processing.</li>
-<li><code>input</code> is the data being passed to the asop to do its job.</li>
-<li><code>success</code> is an asop to start once this asop finishes
-successfully.</li>
-<li><code>failure</code> is an asop to start if this asop cannot be completed for
-some reason.</li>
-</ol>
-
-
-<blockquote><p>Note that an asop is recursively defined in terms of and makes use of two
-other asops <code>success</code> and <code>failure</code>, which themselves have the <em>same</em>
-function signature.</p></blockquote>
-
-<p>We take <code>M.error</code> to be a utility that produces an error object that captures
-the current error state to pass to the failure operation. Here is a simple
-definition for <code>M</code> --</p>
-
-<p>``` js
-M.start = function (op, input, succ, fail) {</p>
-
-<pre><code>setTimeout(function () {
-    op(M, input, succ, fail);
-}, 0);
-</code></pre>
-
-<p>};
-M.error = function (descr, input, succ, fail) {</p>
-
-<pre><code>return new Error({descr: descr, input: input, success: succ, failure: fail});
-</code></pre>
-
-<p>},
-M.end = function () {};
-```</p>
-
-<h2>Sequencing two operations</h2>
-
-<p>Since our operations are ordinary functions, we can write a "sequencing operator"
-for combining two operations as a higher order function as follows --</p>
-
-<p>``` js
-function seq(first, next) {</p>
-
-<pre><code>return function (M, input, success, failure) {
-    M.start(first, input, seq(next, success), failure);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<p><em>Note</em>: This looks like infinite recursion, but it will terminate automatically
-when <code>M.end</code> is passed for <code>next</code> because, we define <code>M.end</code> to be the operation
-that doesn't continue further.</p>
-
-<h2>Making a chain of operations</h2>
-
-<p>The humble <code>seq</code> operator can now be put to use to chain an arbitrary
-number of operations given as an array ---</p>
-
-<p>``` js
-function chain(operations) {</p>
-
-<pre><code>var revOps = operations.slice(0).reverse();
-return function (M, input, success, failure) {
-    M.start(revOps.reduce(seq, success), input, M.end, failure);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<h2>Umm ... why do we need a DSL again?</h2>
-
-<p>You'd be right in asking that question. So far, it looks like the language is
-expressive enough to let us code up all these compositions using plain higher
-order functions. So, let me throw something into the mix that might cause you
-to stumble if you think such functions alone are adequate.</p>
-
-<p>Consider the exchanges that happen between a web server and a client (browser).
-A client instructs a web server to perform some operation, the server gets back
-when done, or with progress notifications, then the client does a few async things
-like store some data locally, and then makes the next request and so on. The ability
-to represent a <em>sequence</em> of actions directly is a boon to take care of all these
-exchanges happening between these two dance partners.</p>
-
-<blockquote><h3>So here is your task - ###</h3>
-
-<p>Abstract away the transaction to survive a termination of connection with the
-server. I'm not talking packet loss here.  I'm talking about the user
-initiating a series of operations and in the middle of things shutting down
-the browser. What I want to happen is for the operations to continue exactly
-from wherever they left off -- because I cannot "throw an exception" and undo
-a rocket launch. If the client was waiting for a response from the server, it
-should again start waiting for that response; and by implication if the
-server was doing something and found out that the connection had terminated
-at the "next" step, it should've stored away whatever it needed to do to
-continue, and must resume that when the user connects again, maybe after some
-mild handshaking. In particular, it is <em>not</em> acceptable to terminate the
-operation sequence just because the browser was closed.</p></blockquote>
-
-<p>Trying to do something like this is where reifying processes as functions
-breaks down. To a lisp/scheme programmer, a solution would already be in sight
--- use s-expressions to represent operations and store away instructions in
-that form. What might we do in the Javascript world?</p>
-
-<h2>J expressions</h2>
-
-<p>The image I have in my mind now is Douglas Crockford standing with legs apart,
-arms folded, cape flying with a speech bubble pointing to his head saying
-"JSON to the rescue!".</p>
-
-<p>Since we have our framework taking care of coordinating the success and failure
-of operations, all it takes to <em>specify</em> an operation, given a known set of
-named "primitive" operations, are the following --</p>
-
-<ol>
-<li>The <em>name</em> of the operation to start.</li>
-<li>An <em>input</em> object to customize any details of the operation.</li>
-</ol>
-
-
-<p>So, there you go, we can change our representation of an operation from being
-a function to something that looks like -</p>
-
-<p><code>js
-{opname: input_object}
-</code></p>
-
-<p>(Technically, that'll be <code>{"opname": input_object}</code> in JSON, but let's ignore
-that difference since it is <em>serializable</em> using JSON, which is what's
-important.)</p>
-
-<p>The input object is also a literal or computed <em>value</em> which we restrict to
-JSON-serializable values. The named primitive operation can itself be provided
-in a module as a function that takes the whole spec object and does what it is
-supposed to do.</p>
-
-<p>We can now specify a series of operations as an array in this form -</p>
-
-<p>``` js
-{do: [</p>
-
-<pre><code>{ask: "Enter file name: ", 
-    type: "file"},
-{fetchFile: {showProgress: "progress_bar"},
-    reportInterval: 1.0},
-{spawn: {withRetry: {uploadToDropbox: {user: "cat", password: "meow"}},
-            maxTries: 5,
-              onfail: {do: [
-                        {deleteTempFiles: null},
-                        {ask: "Dropbox upload failed. Try again?", 
-                            type: "yes/no",
-                             yes: {retry: true},
-                              no: {raise: "Give up"}}
-                        ]}}},
-{cacheInLocalStore: "prefix"},
-{showInElement: "element_id"}
-</code></pre>
-
-<p>]}
-```</p>
-
-<p>If we are given the primitive operations as members of a module <code>M</code>, we can run
-a primitive operation as follows -</p>
-
-<p>``` js
-function runPrimitiveOperation(opspec) {</p>
-
-<pre><code>return function (M, input, success, failure) {
-    for (var opname in opspec) {
-        M[opname](M, opspec, input, success, failure);
-        return;
-    }
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<blockquote><h4>Note</h4>
-
-<p>Here I'm making use of the fact that JS engines today such as V8 always
-enumerate the keys of an object in the order in which they were added to it.
-This is what lets us identify the <em>first</em> key as determining the operation to
-start with the operation implementation knowing what to make of the other
-keys in the expression, the parameters and so on.</p>
-
-<p>Also note that we've put in a pipeline here -- i.e. <code>ask</code> gets a file name
-that it passes as input to <code>fetchFile</code> which passes the fetched file data to
-<code>spawn</code>, and so on. <code>spawn</code> is a higher order operation, since it takes an
-operation as the argument to perform concurrently, while continuing by
-passing its input through to <code>cacheInLocalStore</code>.</p></blockquote>
-
-<p>Our framework, then, serves as an interpreter for this mini language, providing
-the necessary abstractions on <em>how</em> we expect these operations to be executed
-behind the scenes. What is important is that <em>users</em> of our framework are not
-forced to think about browser shutdown/restart cases and can simply assume
-that the infrastructure we provide will "do the right thing".</p>
-
-<p>Now, I'm not going to go into details of what one actually needs to do to
-<em>implement</em> the shutdown/restart behaviour, but at this point, it ought to be
-clear enough that given a serializable representation of "operations still left
-to do" and a serializable representation of the input to give to this sequence,
-we can dump both at any point to disk (plus some book keeping info) and resume
-after a browser/server restart. We'll need to do that for <em>each task sequence</em>
-that's active at the point the shutdown is initiated.</p>
-
-<p>The important thing is that the one writing the script can focus on writing the
-script instead of the operational details.</p>
-
-<h2>Recap</h2>
-
-<p>The main takeaways from this post are the following -</p>
-
-<ol>
-<li><p>If you find categories of objects in your problem domain that are closed
-over a number of functions and you want to abstract away the constraints
-under which those functions can be combined, you may find it useful to
-create a DSL for your domain.</p></li>
-<li><p>The consistent implementation of key enumeration order of objects in
-Javascript engines allows us to write <strong>specifications of composeable
-computations</strong> using generic JSON-serializable notation that we can call
-"J-expressions".</p>
-
-<pre><code>{opname: main_parameter,
-    keyword1: value1,
-    keyword2: value2,
-    ...}
-</code></pre></li>
-<li><p>J-expressions, in combination with functions that implement what the
-operation named "opname" is supposed to do, are then a systematic way to
-approach DSL construction within Javascript.  The notation is as expressive
-as s-expressions. For instance, here is a way to write a "higher order
-asop" :)</p>
-
-<pre><code>{lambda_the_ultimate: ["arg"],
-    do: [
-        {step1: ..},
-        {step2: ..}
-    ]}
-</code></pre></li>
-</ol>
-
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[Codaholic]]></title>
   <link href="http://srikumarks.github.com/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-24T15:30:19+08:00</updated>
+  <updated>2012-12-27T10:19:19+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -12,6 +12,35 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Scratch pad for text with diacritics]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/"/>
+    <updated>2012-12-27T10:09:00+08:00</updated>
+    <id>http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics</id>
+    <content type="html"><![CDATA[<p>Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can be
+ported between applications is in general a pain. So, I made a small in-browser
+app that serves as [scratch pad for common diacritics].</p>
+
+<h3>Usage</h3>
+
+<p>Straight forward. You just type your text in the provided box using normal
+roman characters first - ex: &#8220;Sankarabharanam&#8221;. Once you&#8217;ve typed that in,
+you select each character to which you want to apply diacritical marks and
+click on the mark you want. You can also press the number key corresponding
+to the diacritical mark you want for the selected character - ex: &#8220;Śankarābharṇam&#8221;.</p>
+
+<p>Your text is automatically saved to local storage, so you can visit the page
+any time and retrieve your text. You&#8217;ll <em>never</em> lose text you key in.</p>
+
+<h3>Known issues</h3>
+
+<p>This works fine in Chrome and Safari on MacOSX, but not in Firefox. I haven&#8217;t
+yet figured out why it doesn&#8217;t work in Firefox. If you find that it works in
+Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[A critique of Tuna]]></title>

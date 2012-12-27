@@ -9,8 +9,8 @@
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="(This is a &#8220;brain-dump&#8221; post). Many write-ups and studies on social networks and privacy issues talk about the
-risk of using one’s &hellip;">
+  <meta name="description" content="How would Newcomb&#8217;s problem look like in the physical world, taking quantum
+physics into account? Specifically, would Omega need to know &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@ risk of using one’s &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://srikumarks.github.com/blog/page/9/">
+  <link rel="canonical" href="http://srikumarks.github.com/blog/page/10/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -83,7 +83,7 @@ risk of using one’s &hellip;">
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2012/01/03/social-hash-as-identity/">Social Hash as Identity</a></h1>
+      <h1 class="entry-title"><a href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/">Newcomb&#8217;s Problem and Quantum Physics</a></h1>
     
     
       <p class="meta">
@@ -99,80 +99,66 @@ risk of using one’s &hellip;">
   
 
 
-<time datetime="2012-01-03T00:00:00+08:00" pubdate data-updated="true">Jan 3<span>rd</span>, 2012</time>
+<time datetime="2011-05-07T00:00:00+08:00" pubdate data-updated="true">May 7<span>th</span>, 2011</time>
         
-         | <a href="/blog/2012/01/03/social-hash-as-identity/#disqus_thread">Comments</a>
+         | <a href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/#disqus_thread">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>(This is a &#8220;brain-dump&#8221; post).</p>
+  <div class="entry-content"><p>How would <a href="http://lesswrong.com/lw/nc/newcombs_problem_and_regret_of_rationality/">Newcomb&#8217;s problem</a> look like in the physical world, taking quantum
+physics into account? Specifically, would Omega need to know quantum physics in
+order to predict my decision on &#8220;to one box or not to one box&#8221;?</p>
 
-<p>Many write-ups and studies on social networks and privacy issues talk about the
-risk of using one’s personal information disclosed within social networks for
-identity theft. That made me think about whether it is really possible for an
-identity thief to steal my entire social environment and history or whether
-such theft is simply an indication of how broken the current paper-world
-identity systems are in the digital age?</p>
+<p>To simplify the picture, imagine that Omega has a variable with it that can be
+either in the state A+B or B and which is expected to correlate with my
+decision and therefore serves to &#8220;predict&#8221; me. Omega runs some physical process
+to arrive at the contents of this variable. I&#8217;m assuming that &#8220;to predict&#8221;
+means &#8220;to simulate&#8221; - i.e. Omega can predict me by running a simulation of me
+(say using a universal quantum Turing machine) though that is not necessarily
+the only way to do so. Given that we&#8217;re in a quantum world, would Omega
+actually need to simulate me in order to ensure a correlation between its
+variable and my choice, potentially in another galaxy, of whether to pick A+B
+or B?</p>
 
-<p>Enter the “social hash” – a short identification string that can be generated
-from the data in your social network’s history that is very highly likely to be
-unique to you and very difficult to duplicate in a &#8220;prove your identity&#8221;
-challenge.</p>
+<p>Say <code>|Oab&gt;</code> and <code>|Ob&gt;</code> are the two eigenstates of Omega&#8217;s variable (w.r.t.
+some operator it has) and the box system in front of me similarly has two
+eigenstates <code>|Cab&gt;</code> and <code>|Cb&gt;</code> (&#8220;C&#8221; for &#8220;choice&#8221;) and my &#8220;action&#8221; is simply a
+choice of measuring the box system in the state <code>|Cab&gt;</code> or in the state
+<code>|Cb&gt;</code> and not a mixture of them.</p>
 
-<p>Let us consider a person’s &#8220;social history&#8221; (say on Facebook for simplicity,
-but the same concept will also apply to google+) – i.e. The linear sequence of
-events related to the establishment and termination of all my connections with
-other people on the network. Each event is one of –</p>
+<p>If Omega sets up an EPR-like entanglement between its variable and the box
+system of the form <code>m|Oab&gt;|Cab&gt; + n|Ob&gt;|Cb&gt;</code>, and then chooses to measure a
+mixed state of its variable, say, <code>|Oab&gt;+|Ob&gt;</code>, it can bifurcate the universe.
+Then, if I measure <code>|Cab&gt;</code> (i.e. choose A+B), I end up in the same universe as
+the one in which Omega measured its variable to be <code>|Oab&gt;</code> and if I choose
+<code>|Cb&gt;</code>, I end up in the same universe as the one in which Omega measured its
+variable to be <code>|Ob&gt;</code>.  Therefore, if our two systems are entangled this way,
+Omega wouldn&#8217;t need to take any trouble to simulate me at all in order to
+ensure its reputation of being a perfect predictor!</p>
 
-<pre><code>joined on DATETIME at GPSLOC
-added/removed PERSON to/from CIRCLE on DATETIME at GPSLOC
-checkedin at GPSLOC on DATETIME
-</code></pre>
+<p>That is only as far as Omega&#8217;s reputation for being a perfect predictor is
+concerned. But hold on for a moment there. In this setup, the box system&#8217;s
+state is not disconnected from that of Omega&#8217;s predictor variable even if Omega
+has left the galaxy and yet Omega cannot causally influence it &#8220;contents&#8221;. In
+my thinking, this is an argument against the stance of the &#8220;causal decision
+theorists&#8221; that whatever the contents of the box, it is &#8220;fixed&#8221; and therefore I
+maximize my utility by picking A+B. This is now an argument for the one boxers
+observing that Omega has shown a solid history of being right (i.e. Omega&#8217;s
+internal variable has always correlated with the choices of all the people
+before), forming the simplest (?) explanation that Omega could be using quantum
+entanglement to effect the correlation, and therefore choosing to one box so
+that they end up in the universe with a million bucks instead of the one with a
+thousand.</p>
 
-<p>A stream of such events is guaranteed to be linear in time since they are all
-actions taken by one person &#8230; with no two events having the same time time
-stamp even at the 1 second resolution. A strong hash of this kind of “history
-string” therefore captures &#8220;me&#8221; in terms of my social network history.
-Authorities needing to verify my identity can request for a “recent ID” that
-they can then verify using a back channel into the social network doubling as
-an identity service.</p>
+<p>So, my final question is this - does knowledge of quantum physics resolve
+Newcomb&#8217;s problem in favour of the one boxers? If not, the arguments certainly
+would be interesting to read :)</p>
 
-<p>Now, what should we use in the PERSON field for an event? It seems obvious that
-it has to be that person&#8217;s ID hash at that particular event’s DATETIME when the
-event happened. With this scheme, it seems to me that the only way an attacker
-can steal your identity is to actually login as you – i.e. only by hacking into
-your account. If the trusted social network and id provider (do I hear a &#8220;yeah,
-right&#8221;?) uses a multiple-point verification system prior to revealing a recent
-social snapshot hash of you to yourself (ex: SMS one time passcode and digipass
-like banks do now), an attacker might have reasonable difficulty in producing
-your ID string even if s/he has your account hacked. At each such point at
-which your ID is verified successfully by an agency, a new verification event
-can also be tacked on to your running hash similar to a checkin. Also, identity
-verification can be conducted without actually having anyone peek into your
-facebook/g+ account since they will only need to check hash equality. Existing
-social networks will also be able to generate such an ID for you
-retrospectively as well.</p>
-
-<p>Do you think such a &#8220;social snapshot&#8221; as an ID can make identity theft
-difficult? There are lots of corner cases and improvements that can be done on
-the basic scheme described above, but my question is only that of viability of
-the scheme.</p>
-
-<p>Computing the hash at any given time would not require the whole history string
-to be available. I described the hash as though it were computed on one long
-string for simplicity, but we only need to compute a recursive hash – i.e. when
-a new event happens, a new hash is generated by hashing together the most
-recent hash and the new event record. This way, you don’t have to keep a long
-running string anywhere in the social network provider’s backend.</p>
-
-<p>If the provider’s user interface and APIs never reveal time information to a
-sub-second accuracy and a millisecond accurate time stamp is used in the hash,
-this can provide some additional difficulty in reproducing the hash as well.</p>
-
-<p>(PS: My original google plus post on this is <a href="https://plus.google.com/102694714835839603248/posts/b7SsJTR1GGV">here</a>.)</p>
+<p>PS: I tried to post this on the Less Wrong site but my post isn&#8217;t appearing in
+the comments. So I&#8217;m just posting it here for starters.</p>
 </div>
   
   
@@ -182,11 +168,9 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
   
   <div class="pagination">
     
-      <a class="prev" href="/blog/page/10/">&larr; Older</a>
-    
     <a href="/blog/archives">Blog Archives</a>
     
-    <a class="next" href="/blog/page/8/">Newer &rarr;</a>
+    <a class="next" href="/blog/page/9/">Newer &rarr;</a>
     
   </div>
 </div>

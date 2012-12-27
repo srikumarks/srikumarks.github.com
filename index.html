@@ -9,8 +9,8 @@
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="Google has open sourced the Tuna set of effects used in their Jam with Chrome
-project. Here, I collect some thoughts about the code design decisions &hellip;">
+  <meta name="description" content="Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -83,7 +83,7 @@ project. Here, I collect some thoughts about the code design decisions &hellip;"
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2012/11/09/a-critique-of-tuna/">A Critique of Tuna</a></h1>
+      <h1 class="entry-title"><a href="/blog/2012/12/27/scratch-pad-for-text-with-diacritics/">Scratch Pad for Text With Diacritics</a></h1>
     
     
       <p class="meta">
@@ -99,107 +99,36 @@ project. Here, I collect some thoughts about the code design decisions &hellip;"
   
 
 
-<time datetime="2012-11-09T00:00:00+08:00" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
+<time datetime="2012-12-27T10:09:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
         
-         | <a href="/blog/2012/11/09/a-critique-of-tuna/#disqus_thread">Comments</a>
+         | <a href="/blog/2012/12/27/scratch-pad-for-text-with-diacritics/#disqus_thread">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
-project. Here, I collect some thoughts about the code design decisions for their
-effects framework, since I myself have written <a href="http://github.com/srikumarks/steller">Steller</a>.</p>
+  <div class="entry-content"><p>Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can be
+ported between applications is in general a pain. So, I made a small in-browser
+app that serves as [scratch pad for common diacritics].</p>
 
-<h2>Parameters</h2>
+<h3>Usage</h3>
 
-<p>In Tuna, the effects module&#8217;s parameters are presented to the API user as
-object properties and implemented using getters and setters. This is obviously
-simple from the perspective of a module user. However, it has several disadvantages -</p>
+<p>Straight forward. You just type your text in the provided box using normal
+roman characters first - ex: &#8220;Sankarabharanam&#8221;. Once you&#8217;ve typed that in,
+you select each character to which you want to apply diacritical marks and
+click on the mark you want. You can also press the number key corresponding
+to the diacritical mark you want for the selected character - ex: &#8220;Śankarābharṇam&#8221;.</p>
 
-<p>If a module contains another module and you want to expose that parameter,
-you&#8217;re forced to write another getter/setter to handle the indirection. Such
-parameters cannot be passed around &#8220;by reference&#8221;. The only thing you can
-do with them is to set/get their values. &#8220;By reference&#8221; passing is a simple
-way to expose an internal module&#8217;s parameters to the module user which is an
-important kind of composability.</p>
+<p>Your text is automatically saved to local storage, so you can visit the page
+any time and retrieve your text. You&#8217;ll <em>never</em> lose text you key in.</p>
 
-<p>Owing to the getter/setter approach, meta information about parameters such as
-their range, defaults, automation capabilities, etc. need to be stored elsewhere
-in a &#8220;defaults&#8221; object, instead of being directly associated with them.</p>
+<h3>Known issues</h3>
 
-<p>In some of the effects, some internal values and other parameters need to be
-recomputed when a couple of parameters change. In this case, the code for
-updating the dependent parameters is duplicated since it is not particularly
-convenient to write a shared function local when defining parameters using
-<code>Object.create</code> like this -</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="c1">//...</span>
-</span><span class='line'><span class="nx">baseFrequency</span><span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>    <span class="nx">enumerable</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
-</span><span class='line'>    <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span><span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span><span class="p">},</span>
-</span><span class='line'>    <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">=</span> <span class="mi">50</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="nx">value</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">baseFrequency</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">));</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterBp</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterPeaking</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'><span class="p">},</span>
-</span><span class='line'><span class="nx">excursionOctaves</span><span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>    <span class="nx">enumerable</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
-</span><span class='line'>    <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span><span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">},</span>
-</span><span class='line'>    <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span> <span class="o">=</span> <span class="nx">value</span><span class="p">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">baseFrequency</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionOctaves</span><span class="p">));</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterBp</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>        <span class="k">this</span><span class="p">.</span><span class="nx">filterPeaking</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_baseFrequency</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">_excursionFrequency</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_sweep</span><span class="p">;</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'><span class="p">},</span>
-</span><span class='line'><span class="c1">//...</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>A simpler way to solve this would be to have parameters be first class objects
-that can be inspected, instead of just accessing and setting their values. Meta
-data about them can travel along with them. In <a href="http://github.com/srikumarks/steller">Steller</a>, watcher functions can
-be installed on parameters run code when the parameter&#8217;s value changes.</p>
-
-<h2>Inheritance using the <code>prototype</code> mechanism</h2>
-
-<p>One of the code design choices that vastly complicates the code in this case
-is the choice of using <code>prototype</code> based inheritance to define the properties
-of instantiated effects modules. While this is common in the JS world,
-in this case it deprives the programmer of a local context in which to hide
-internal objects from the effects module&#8217;s user and to write shared private
-code like in the case above. Any potential loss of efficiency in not using
-the prototype mechanism for this application is insignificant since object
-creation is not the thing we should be optimising for.</p>
-
-<p>The &#8220;define all methods and properties within the constructor function&#8221;
-approach is much more suitable in this situation.</p>
+<p>This works fine in Chrome and Safari on MacOSX, but not in Firefox. I haven&#8217;t
+yet figured out why it doesn&#8217;t work in Firefox. If you find that it works in
+Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
 </div>
   
   
@@ -222,6 +151,10 @@ approach is much more suitable in this situation.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2012/12/27/scratch-pad-for-text-with-diacritics/">Scratch pad for text with diacritics</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
       </li>
     
@@ -235,10 +168,6 @@ approach is much more suitable in this situation.</p>
     
       <li class="post">
         <a href="/blog/2012/04/15/j-expressions/">J-expressions</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">Creating DSLs in Javascript using J-expressions</a>
       </li>
     
   </ul>

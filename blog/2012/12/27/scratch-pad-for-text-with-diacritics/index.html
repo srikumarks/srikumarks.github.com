@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Codaholic</title>
+  <title>Scratch pad for text with diacritics - Codaholic</title>
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="(This is a &#8220;brain-dump&#8221; post). Many write-ups and studies on social networks and privacy issues talk about the
-risk of using one’s &hellip;">
+  <meta name="description" content="Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@ risk of using one’s &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://srikumarks.github.com/blog/page/9/">
+  <link rel="canonical" href="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -75,15 +75,12 @@ risk of using one’s &hellip;">
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2012/01/03/social-hash-as-identity/">Social Hash as Identity</a></h1>
+      <h1 class="entry-title">Scratch Pad for Text With Diacritics</h1>
     
     
       <p class="meta">
@@ -99,97 +96,96 @@ risk of using one’s &hellip;">
   
 
 
-<time datetime="2012-01-03T00:00:00+08:00" pubdate data-updated="true">Jan 3<span>rd</span>, 2012</time>
+<time datetime="2012-12-27T10:09:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
         
-         | <a href="/blog/2012/01/03/social-hash-as-identity/#disqus_thread">Comments</a>
+         | <a href="#disqus_thread">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>(This is a &#8220;brain-dump&#8221; post).</p>
+<div class="entry-content"><p>Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can be
+ported between applications is in general a pain. So, I made a small in-browser
+app that serves as [scratch pad for common diacritics].</p>
 
-<p>Many write-ups and studies on social networks and privacy issues talk about the
-risk of using one’s personal information disclosed within social networks for
-identity theft. That made me think about whether it is really possible for an
-identity thief to steal my entire social environment and history or whether
-such theft is simply an indication of how broken the current paper-world
-identity systems are in the digital age?</p>
+<h3>Usage</h3>
 
-<p>Enter the “social hash” – a short identification string that can be generated
-from the data in your social network’s history that is very highly likely to be
-unique to you and very difficult to duplicate in a &#8220;prove your identity&#8221;
-challenge.</p>
+<p>Straight forward. You just type your text in the provided box using normal
+roman characters first - ex: &#8220;Sankarabharanam&#8221;. Once you&#8217;ve typed that in,
+you select each character to which you want to apply diacritical marks and
+click on the mark you want. You can also press the number key corresponding
+to the diacritical mark you want for the selected character - ex: &#8220;Śankarābharṇam&#8221;.</p>
 
-<p>Let us consider a person’s &#8220;social history&#8221; (say on Facebook for simplicity,
-but the same concept will also apply to google+) – i.e. The linear sequence of
-events related to the establishment and termination of all my connections with
-other people on the network. Each event is one of –</p>
+<p>Your text is automatically saved to local storage, so you can visit the page
+any time and retrieve your text. You&#8217;ll <em>never</em> lose text you key in.</p>
 
-<pre><code>joined on DATETIME at GPSLOC
-added/removed PERSON to/from CIRCLE on DATETIME at GPSLOC
-checkedin at GPSLOC on DATETIME
-</code></pre>
+<h3>Known issues</h3>
 
-<p>A stream of such events is guaranteed to be linear in time since they are all
-actions taken by one person &#8230; with no two events having the same time time
-stamp even at the 1 second resolution. A strong hash of this kind of “history
-string” therefore captures &#8220;me&#8221; in terms of my social network history.
-Authorities needing to verify my identity can request for a “recent ID” that
-they can then verify using a back channel into the social network doubling as
-an identity service.</p>
-
-<p>Now, what should we use in the PERSON field for an event? It seems obvious that
-it has to be that person&#8217;s ID hash at that particular event’s DATETIME when the
-event happened. With this scheme, it seems to me that the only way an attacker
-can steal your identity is to actually login as you – i.e. only by hacking into
-your account. If the trusted social network and id provider (do I hear a &#8220;yeah,
-right&#8221;?) uses a multiple-point verification system prior to revealing a recent
-social snapshot hash of you to yourself (ex: SMS one time passcode and digipass
-like banks do now), an attacker might have reasonable difficulty in producing
-your ID string even if s/he has your account hacked. At each such point at
-which your ID is verified successfully by an agency, a new verification event
-can also be tacked on to your running hash similar to a checkin. Also, identity
-verification can be conducted without actually having anyone peek into your
-facebook/g+ account since they will only need to check hash equality. Existing
-social networks will also be able to generate such an ID for you
-retrospectively as well.</p>
-
-<p>Do you think such a &#8220;social snapshot&#8221; as an ID can make identity theft
-difficult? There are lots of corner cases and improvements that can be done on
-the basic scheme described above, but my question is only that of viability of
-the scheme.</p>
-
-<p>Computing the hash at any given time would not require the whole history string
-to be available. I described the hash as though it were computed on one long
-string for simplicity, but we only need to compute a recursive hash – i.e. when
-a new event happens, a new hash is generated by hashing together the most
-recent hash and the new event record. This way, you don’t have to keep a long
-running string anywhere in the social network provider’s backend.</p>
-
-<p>If the provider’s user interface and APIs never reveal time information to a
-sub-second accuracy and a millisecond accurate time stamp is used in the hash,
-this can provide some additional difficulty in reproducing the hash as well.</p>
-
-<p>(PS: My original google plus post on this is <a href="https://plus.google.com/102694714835839603248/posts/b7SsJTR1GGV">here</a>.)</p>
+<p>This works fine in Chrome and Safari on MacOSX, but not in Firefox. I haven&#8217;t
+yet figured out why it doesn&#8217;t work in Firefox. If you find that it works in
+Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
 </div>
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Srikumar</span></span>
+
+      
+
+
+
+
+
+
+
+
   
 
 
-    </article>
+<time datetime="2012-12-27T10:09:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
+      
+
+<span class="categories">
   
-  <div class="pagination">
+    <a class='category' href='/blog/categories/javascript/'>javascript</a>
+  
+</span>
+
+
+    </p>
     
-      <a class="prev" href="/blog/page/10/">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-    <a class="next" href="/blog/page/8/">Newer &rarr;</a>
-    
-  </div>
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/" data-via="" data-counturl="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/" >Tweet</a>
+  
+  
+  
 </div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/11/09/a-critique-of-tuna/" title="Previous Post: A critique of Tuna">&laquo; A critique of Tuna</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
 <aside class="sidebar">
   
     <section>
@@ -222,7 +218,7 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
 <section>
   <h1>GitHub Repos</h1>
   <ul id="gh_repos">
-    <li class="loading">Status updating&#8230;</li>
+    <li class="loading">Status updating...</li>
   </ul>
   
   <a href="https://github.com/srikumarks">@srikumarks</a> on GitHub
@@ -256,6 +252,7 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -270,7 +267,10 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
       var disqus_shortname = 'codaholic';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/';
+        var disqus_url = 'http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
