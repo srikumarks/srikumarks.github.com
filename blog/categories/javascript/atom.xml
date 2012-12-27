@@ -4,7 +4,7 @@
   <title><![CDATA[Category: javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-27T10:25:21+08:00</updated>
+  <updated>2012-12-27T10:28:18+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -29,7 +29,8 @@ app that serves as a <a href="http://srikumarks.github.com/demos/diacritics">scr
 roman characters first - ex: "Sankarabharanam". Once you've typed that in,
 you select each character to which you want to apply diacritical marks and
 click on the mark you want. You can also press the number key corresponding
-to the diacritical mark you want for the selected character - ex: "Śankarābharṇam".</p>
+to the diacritical mark you want for the selected character. With this,
+you can get "Śankarābharaṇam".</p>
 
 <p>Your text is automatically saved to local storage, so you can visit the page
 any time and retrieve your text. You'll <em>never</em> lose text you key in.</p>
