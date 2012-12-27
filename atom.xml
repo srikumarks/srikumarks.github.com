@@ -4,7 +4,7 @@
   <title><![CDATA[Codaholic]]></title>
   <link href="http://srikumarks.github.com/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-27T10:23:44+08:00</updated>
+  <updated>2012-12-27T10:25:21+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -21,7 +21,7 @@
     <content type="html"><![CDATA[<p>Roman text with a few choice diacritics are a common need when writing about
 Indian classical music. Creating unicode text with diacritics that can be
 ported between applications is in general a pain. So, I made a small in-browser
-app that serves as <a href="http://srikumarks.github.com/demos/diacritics">scratch pad for common diacritics</a>.</p>
+app that serves as a <a href="http://srikumarks.github.com/demos/diacritics">scratch pad for common diacritics</a>.</p>
 
 <h3>Usage</h3>
 
