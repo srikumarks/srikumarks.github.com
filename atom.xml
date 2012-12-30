@@ -4,7 +4,7 @@
   <title><![CDATA[Codaholic]]></title>
   <link href="http://srikumarks.github.com/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2012-12-30T12:37:24+08:00</updated>
+  <updated>2012-12-30T16:20:33+08:00</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -12,6 +12,26 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Exploring grha bhedams]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/12/30/exploring-grha-bhedams/"/>
+    <updated>2012-12-30T15:43:00+08:00</updated>
+    <id>http://srikumarks.github.com/blog/2012/12/30/exploring-grha-bhedams</id>
+    <content type="html"><![CDATA[<p>Here is a demo web app for exploring <a href="http://srikumarks.github.com/demos/bhedam">rāgās and their bhēdams</a>.</p>
+
+<p>A few weeks ago, I had a conversation with Mr. Ramesh who showed me
+some amazing Excel wizardry and spells he&#8217;d cast to be able to take
+a raga and ask questions about its <a href="http://en.wikipedia.org/wiki/Graha_bhedam">grha bhēdams</a>. I hadn&#8217;t realized
+until then that the question of what the scales of ragas turn into
+when you do bhēdams on them (grha or śruti bhēdam) is of interest
+to musicians. So I resurrect a rāgā database that I&#8217;d scraped off
+Wikipedia&#8217;s <a href="http://en.wikipedia.org/wiki/List_of_Janya_Ragas">Janya Rāgās</a> some 4 years ago and make a bhēdam explorer
+web app.</p>
+
+<p>Have fun!</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Scratch pad for text with diacritics]]></title>
