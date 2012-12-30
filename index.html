@@ -395,7 +395,31 @@ bring that &#8220;luxury&#8221; to the web programming world.</p>
 </section>
 
 
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("srikumarks", 4, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/srikumarks" class="twitter-follow-button" data-show-count="false">Follow @srikumarks</a>
+  
+</section>
 
+
+<section class="googleplus">
+  <h1>
+    <a href="https://plus.google.com/srikumarks?rel=author">
+      <img src="http://www.google.com/images/icons/ui/gprofile_button-32.png" width="32" height="32">
+      Google+
+    </a>
+  </h1>
+</section>
 
 
 
@@ -428,6 +452,14 @@ bring that &#8220;luxury&#8221; to the web programming world.</p>
 
 
 
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
 
 
 
