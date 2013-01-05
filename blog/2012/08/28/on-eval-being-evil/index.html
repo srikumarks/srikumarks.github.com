@@ -456,47 +456,81 @@ sandbox.</p>
 <span class='line-number'>34</span>
 <span class='line-number'>35</span>
 <span class='line-number'>36</span>
-</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">poorMansSandbox</span><span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>    <span class="c1">// arguments[0] is the code string to be evaluated in the sandbox.</span>
-</span><span class='line'>    <span class="c1">// &quot;allowed&quot; contains all the permitted symbols for the code. (This is</span>
-</span><span class='line'>    <span class="c1">// an incomplete list.)</span>
-</span><span class='line'>    <span class="kd">var</span> <span class="nx">allowed</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">&quot;eval&quot;</span><span class="o">:</span>     <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;Math&quot;</span> <span class="o">:</span>    <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;Object&quot;</span><span class="o">:</span>   <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;Array&quot;</span><span class="o">:</span>    <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;Function&quot;</span><span class="o">:</span> <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;String&quot;</span><span class="o">:</span>   <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;Date&quot;</span><span class="o">:</span>     <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="s2">&quot;Number&quot;</span><span class="o">:</span>   <span class="kc">true</span>
-</span><span class='line'>                  <span class="p">};</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="p">;(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">this</span><span class="p">.</span><span class="nx">poorMansSandbox</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">makeSandbox</span><span class="p">,</span> <span class="nx">world</span><span class="p">,</span> <span class="nx">allowed</span><span class="p">)</span> <span class="p">{</span>
 </span><span class='line'>
-</span><span class='line'>    <span class="c1">// &quot;inScope&quot; contains all the visible definitions for the code.</span>
-</span><span class='line'>    <span class="c1">// Make sure the symbols &quot;inScope&quot; and &quot;allowed&quot; are themselves not visible.</span>
-</span><span class='line'>    <span class="kd">var</span> <span class="nx">inScope</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">inScope</span><span class="o">:</span> <span class="kc">undefined</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="nx">allowed</span><span class="o">:</span> <span class="kc">undefined</span>
-</span><span class='line'>                  <span class="p">,</span> <span class="nx">poorMansSandbox</span><span class="o">:</span> <span class="kc">undefined</span>
-</span><span class='line'>                  <span class="p">};</span>
+</span><span class='line'>        <span class="c1">// Make poorMansSandbox itself unavailable.</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">scope</span> <span class="o">=</span> <span class="p">{</span><span class="nx">poorMansSandbox</span><span class="o">:</span> <span class="kc">undefined</span><span class="p">};</span>
 </span><span class='line'>
-</span><span class='line'>    <span class="c1">// We need to run the eval in a separate function scope with</span>
-</span><span class='line'>    <span class="c1">// a properly bound &quot;this&quot; because otherwise &quot;this&quot; will be</span>
-</span><span class='line'>    <span class="c1">// the &quot;window&quot; object and all our efforts will have been in vain.</span>
-</span><span class='line'>    <span class="c1">// We make &quot;this&quot; the scope object itself (i.e. &quot;inScope&quot;)</span>
-</span><span class='line'>    <span class="k">return</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>        <span class="nb">Object</span><span class="p">.</span><span class="nx">getOwnPropertyNames</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">allowed</span><span class="p">[</span><span class="nx">g</span><span class="p">])</span> <span class="p">{</span>
-</span><span class='line'>                <span class="nx">inScope</span><span class="p">[</span><span class="nx">g</span><span class="p">]</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">sandbox</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">update</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>            <span class="c1">// Mask every global thing visible, except &quot;allowed&quot;.</span>
+</span><span class='line'>            <span class="nb">Object</span><span class="p">.</span><span class="nx">getOwnPropertyNames</span><span class="p">(</span><span class="nx">world</span><span class="p">).</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">scope</span><span class="p">[</span><span class="nx">g</span><span class="p">]</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
+</span><span class='line'>            <span class="p">});</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="nx">allowed</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">scope</span><span class="p">[</span><span class="nx">g</span><span class="p">]</span> <span class="o">=</span> <span class="nx">world</span><span class="p">[</span><span class="nx">g</span><span class="p">];</span>
+</span><span class='line'>            <span class="p">});</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="nx">sandbox</span> <span class="o">=</span> <span class="nx">makeSandbox</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">scope</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="k">return</span> <span class="nx">arguments</span><span class="p">.</span><span class="nx">callee</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}());</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="p">(</span><span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="c1">// Call the sandboxer with no arguments to</span>
+</span><span class='line'>                <span class="c1">// force it to update its world state.</span>
+</span><span class='line'>                <span class="nx">update</span><span class="p">();</span>
+</span><span class='line'>                <span class="k">return</span> <span class="nx">arguments</span><span class="p">.</span><span class="nx">callee</span><span class="p">;</span>
 </span><span class='line'>            <span class="p">}</span>
-</span><span class='line'>        <span class="p">});</span>
-</span><span class='line'>        <span class="kd">with</span> <span class="p">(</span><span class="nx">inScope</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>            <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="nx">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-</span><span class='line'>        <span class="p">}</span>
-</span><span class='line'>    <span class="p">}).</span><span class="nx">call</span><span class="p">(</span><span class="nx">inScope</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="k">return</span> <span class="nx">sandbox</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">scope</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="p">}(</span>  <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">with</span> <span class="p">(</span><span class="k">this</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">return</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>                    <span class="s2">&quot;use strict&quot;</span><span class="p">;</span>
+</span><span class='line'>                    <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="nx">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+</span><span class='line'>                <span class="p">};</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">}),</span>
+</span><span class='line'>        <span class="k">this</span><span class="p">,</span>
+</span><span class='line'>        <span class="p">[</span><span class="s2">&quot;eval&quot;</span><span class="p">,</span> <span class="s2">&quot;Math&quot;</span><span class="p">,</span> <span class="s2">&quot;Object&quot;</span><span class="p">,</span> <span class="s2">&quot;Array&quot;</span><span class="p">,</span> <span class="s2">&quot;Function&quot;</span><span class="p">,</span> <span class="s2">&quot;String&quot;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s2">&quot;Date&quot;</span><span class="p">,</span> <span class="s2">&quot;Number&quot;</span><span class="p">,</span> <span class="s2">&quot;Boolean&quot;</span><span class="p">,</span> <span class="s2">&quot;Infinity&quot;</span><span class="p">,</span> <span class="s2">&quot;NaN&quot;</span><span class="p">,</span> <span class="s2">&quot;isNaN&quot;</span><span class="p">,</span>
+</span><span class='line'>         <span class="s2">&quot;isFinite&quot;</span><span class="p">]</span>
+</span><span class='line'>    <span class="p">));</span>
+</span><span class='line'><span class="p">}());</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
+<p>The idea behind the above code is to prevent access to global properties
+other than the ones given in the <code>allowed</code> array. Furthermore, we also
+don&#8217;t want the eval code to add new global properties by simple assignment,
+for which we simply use strict mode evaluation.</p>
+
 <p>Though this prevents access to existing global properties, it doesn&#8217;t prevent
-access to properties that will be added to <code>window</code> <em>after</em> the <code>eval</code> happens.</p>
+access to properties that will be added to <code>window</code> <em>after</em> the <code>eval</code> happens.
+To update the internal <code>scope</code> object of the <code>poorMansSandbox</code>, call it
+once with no arguments before calling it on the string to be evaluated.</p>
+
+<p>Of course, the eval-ed code can still do malicious things, but it cannot
+at least do them inadvertently. Hence &#8220;poor man&#8217;s&#8221;.</p>
 
 <h2>Conclusion</h2>
 
@@ -625,7 +659,7 @@ Remember - there is always something &#8220;good&#8221; in every &#8220;evil&#82
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2012 - Srikumar -
+  Copyright &copy; 2013 - Srikumar -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
