@@ -468,24 +468,42 @@ sandbox.</p>
 <span class='line-number'>46</span>
 <span class='line-number'>47</span>
 <span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
 </pre></td><td class='code'><pre><code class='js'><span class='line'><span class="p">;(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
 </span><span class='line'>    <span class="k">this</span><span class="p">.</span><span class="nx">poorMansSandbox</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">makeSandbox</span><span class="p">,</span> <span class="nx">world</span><span class="p">,</span> <span class="nx">allowed</span><span class="p">)</span> <span class="p">{</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="c1">// Make poorMansSandbox itself unavailable.</span>
-</span><span class='line'>        <span class="kd">var</span> <span class="nx">scope</span> <span class="o">=</span> <span class="p">{</span><span class="nx">poorMansSandbox</span><span class="o">:</span> <span class="kc">undefined</span><span class="p">};</span>
+</span><span class='line'>        <span class="c1">// Makes obj and all its ancestors read-only.</span>
+</span><span class='line'>        <span class="kd">function</span> <span class="nx">freezeHard</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">iter</span> <span class="o">=</span> <span class="nx">obj</span><span class="p">;</span> <span class="nx">iter</span><span class="p">;</span> <span class="nx">iter</span> <span class="o">=</span> <span class="nx">iter</span><span class="p">.</span><span class="nx">__proto__</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">try</span> <span class="p">{</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">freeze</span><span class="p">(</span><span class="nx">iter</span><span class="p">);</span> <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{}</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>            <span class="k">return</span> <span class="nx">obj</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="kd">var</span> <span class="nx">sandbox</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">scope</span><span class="p">,</span> <span class="nx">sandbox</span><span class="p">;</span>
 </span><span class='line'>
 </span><span class='line'>        <span class="kd">var</span> <span class="nx">update</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>            <span class="c1">// Make poorMansSandbox itself unavailable.</span>
+</span><span class='line'>            <span class="nx">scope</span> <span class="o">=</span> <span class="p">{</span><span class="nx">poorMansSandbox</span><span class="o">:</span> <span class="kc">undefined</span><span class="p">};</span>
+</span><span class='line'>
 </span><span class='line'>            <span class="c1">// Mask every global thing visible, except &quot;allowed&quot;.</span>
 </span><span class='line'>            <span class="nb">Object</span><span class="p">.</span><span class="nx">getOwnPropertyNames</span><span class="p">(</span><span class="nx">world</span><span class="p">).</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
 </span><span class='line'>                <span class="nx">scope</span><span class="p">[</span><span class="nx">g</span><span class="p">]</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
 </span><span class='line'>            <span class="p">});</span>
 </span><span class='line'>
 </span><span class='line'>            <span class="nx">allowed</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>                <span class="nx">scope</span><span class="p">[</span><span class="nx">g</span><span class="p">]</span> <span class="o">=</span> <span class="nx">world</span><span class="p">[</span><span class="nx">g</span><span class="p">];</span>
+</span><span class='line'>                <span class="nx">scope</span><span class="p">[</span><span class="nx">g</span><span class="p">]</span> <span class="o">=</span> <span class="nx">freezeHard</span><span class="p">(</span><span class="nx">world</span><span class="p">[</span><span class="nx">g</span><span class="p">]);</span>
 </span><span class='line'>            <span class="p">});</span>
 </span><span class='line'>
+</span><span class='line'>            <span class="nx">freezeHard</span><span class="p">(</span><span class="nx">scope</span><span class="p">);</span>
 </span><span class='line'>            <span class="nx">sandbox</span> <span class="o">=</span> <span class="nx">makeSandbox</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">scope</span><span class="p">);</span>
 </span><span class='line'>
 </span><span class='line'>            <span class="k">return</span> <span class="nx">arguments</span><span class="p">.</span><span class="nx">callee</span><span class="p">;</span>
