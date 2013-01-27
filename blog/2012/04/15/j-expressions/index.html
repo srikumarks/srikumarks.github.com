@@ -1,0 +1,422 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>J-expressions - Codaholic</title>
+  <meta name="author" content="Srikumar">
+
+  
+  <meta name="description" content="">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://srikumarks.github.com/blog/2012/04/15/j-expressions/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Codaholic" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Cantata+One' rel='stylesheet' type='text/css'>
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37337144-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Codaholic</a></h1>
+  
+    <h2>Does the dog have Turing nature?</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:srikumarks.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="https://github.com/srikumarks">Github</a></li>
+  <li><a href="/demos">Demos</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">J-expressions</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-15T00:00:00+08:00" pubdate data-updated="true">Apr 15<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://www.json.org">JSON</a> has become a kind of de-facto standard for sharing data among services
+on the web. The Lisp folks have enjoyed this luxury ever since &#8230; well ever
+since McCarthy made the language and his student implemented an interpreter for
+it. What&#8217;s more, they have also had the luxury of using the same syntax for
+sharing <em>logic</em> .. and in fact take it for granted. This post is a proposal to
+bring that &#8220;luxury&#8221; to the web programming world.</p>
+
+<p><strong>Status:</strong> Draft. Comments welcome.</p>
+
+<!-- more -->
+
+
+<h2>Why is it useful to be able to share logic?</h2>
+
+<p>If you&#8217;ve already bought into Lisp, you may not need much convincing here.  If
+you do ask that question, I&#8217;ve written about <a href="/gyan/2012/04/14/creating-dsls-in-javascript-using-j-expressions">DSLs and J-expressions</a> in an
+earlier post that may be of interest to you.</p>
+
+<h2>Core syntax</h2>
+
+<ol>
+<li><p>A &#8220;J-expression&#8221; is an ordinary JSON-serializeable <strong>object</strong>, whose &#8220;first
+key&#8221; is taken to name an &#8220;operator&#8221;, with the whole object serving as its
+&#8220;operand&#8221;.</p></li>
+<li><p>A J-expression&#8217;s key <strong>must</strong> be an identifier conforming to the following
+regular expression</p>
+
+<pre><code> (Letter|$|_)(Letter|DecimalDigit|$|_)*
+</code></pre></li>
+<li><p>We permit an extension to JSON whereby the key <strong>need not</strong> be a <em>quoted</em>
+string.  Nevertheless, a key <strong>must</strong> conform to the above regular expression
+even when quoted.</p></li>
+<li><p>Everything else &#8211; numbers, strings, dates and arrays &#8211; is just as
+specified in <a href="http://www.json.org">JSON</a>.</p></li>
+<li><p>We leave the question of how the &#8220;operator&#8221; must use the operands open in
+order to allow for eager and lazy computations, and meta-expressions.</p></li>
+<li><p>Every J-expression <strong>may</strong> have a <code>comment</code> key whose value is for human
+consumption and is therefore expected to have nil impact on the meaning of
+the expression to a program.  It <strong>may</strong> therefore be ignored by parsers
+and interpreters. J-expression writers, however, <strong>must</strong> strip out these
+comment fields before serializing these expressions. This means <code>comment</code>
+is a &#8220;reserved key&#8221;.</p></li>
+<li><p>Every J-expression <strong>may</strong> have a <code>meta</code> key whose value is a <a href="http://www.json.org">JSON</a> value
+and is considered of some relevance to the system processing the script.
+This could include additional documentation references, version information,
+source URL for a specification of the operator, etc.  ..  the structure of
+which is left unspecified. J-expression writers, therefore, <strong>must not</strong>
+strip out the <code>meta</code> entry. This means <code>meta</code> is a &#8220;reserved key&#8221;.</p></li>
+</ol>
+
+
+<h4>An example</h4>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="p">{</span><span class="k">do</span><span class="o">:</span> <span class="p">[</span>
+</span><span class='line'>    <span class="p">{</span><span class="nx">fetchURL</span><span class="o">:</span> <span class="s2">&quot;http://some.data.source/&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nx">timeout</span><span class="o">:</span> <span class="mf">30.0</span><span class="p">,</span>
+</span><span class='line'>       <span class="nx">onfail</span><span class="o">:</span> <span class="p">{</span><span class="nx">raiseError</span><span class="o">:</span> <span class="s2">&quot;URL not reachable&quot;</span><span class="p">}},</span>
+</span><span class='line'>    <span class="p">{</span><span class="nx">fork</span><span class="o">:</span> <span class="p">[</span>
+</span><span class='line'>        <span class="p">{</span><span class="nx">displayInElement</span><span class="o">:</span> <span class="s2">&quot;element_id&quot;</span><span class="p">},</span>
+</span><span class='line'>        <span class="p">{</span><span class="nx">cacheInLocalStorage</span><span class="o">:</span> <span class="s2">&quot;prefix&quot;</span><span class="p">}</span>
+</span><span class='line'>        <span class="p">]}]}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The above script can be read as representing a &#8220;pipe&#8221; where the
+data is fetched from some URL and then (concurrently) displayed
+in an element and cached in local storage.</p>
+
+<h3>Some considerations</h3>
+
+<ol>
+<li><p>J-expression parsers are expected to be support both quoted and
+unquoted keys in order to enable &#8220;logic&#8221; and &#8220;data&#8221; to take the
+same form.</p></li>
+<li><p>J-expression writers are also allowed to use either form, but writing
+unquoted keys is preferred since it is more compact than quoted keys and
+closer in form to the notion of &#8220;programming&#8221; or &#8220;scripting&#8221;.</p></li>
+</ol>
+
+
+<h4>The &#8220;first key&#8221; as the &#8220;operator&#8221;</h4>
+
+<p>Javascript implementations today preserve the order in which keys are inserted
+into objects when traversing keys as long as the keys are not array indices.
+Even when the specification does not require them to do so, Google considers it
+a de-facto standard that insertion and enumeration order must match whenever
+only string keys are involved - as noted in this <a href="http://code.google.com/p/v8/issues/detail?id=164">V8 bug</a>. This de-facto
+standard permits easy identification of the &#8220;first key&#8221; in a JSON expression as
+shown below &#8211;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">jexpr_operator</span><span class="p">(</span><span class="nx">jexpr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">first_key</span> <span class="k">in</span> <span class="nx">jexpr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="nx">first_key</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In languages such as <a href="http://www.python.org">Python</a>, <a href="http://ruby-lang.org">Ruby</a> and <a href="http://www.lua.org">Lua</a>, we cannot assume that the
+first key can be so easily identified, but since all these languages have
+custom syntax checking parsers for scanning JSON, it is a trivial extension to
+the parser to add a special key to an object to help identify the first key.</p>
+
+<blockquote><p>The key <code>__jexpr_operator__</code> is reserved for parsers so that they can
+indicate what the &#8220;first key&#8221; is by giving its name as the value of this key.
+For the rest of the system, the presence of this key overrides any key order
+already obeyed by the system. J-expression writers must use this key to
+determine which key to write first, but <strong>must not</strong> output this key itself.</p></blockquote>
+
+<p>Parsers in languages with objects that do not preserve identity between key
+insertion and enumeration order can add a small bit of logic to insert the
+above special key.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">jexpr_operator</span><span class="p">(</span><span class="nx">jexpr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="s2">&quot;__jexpr_operator__&quot;</span> <span class="k">in</span> <span class="nx">jexpr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="nx">jexpr</span><span class="p">.</span><span class="nx">__jexpr_operator__</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">first_key</span> <span class="k">in</span> <span class="nx">jexpr</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="nx">first_key</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Beyond this, we do not need the order of the other keys to be preserved and
+operator implementations should not make that assumption.</p>
+
+<h2>Can we build programming languages using j-expressions?</h2>
+
+<p>It sure looks possible to do so. For example, here is a (toy) compiler for
+<a href="https://github.com/srikumarks/jexpr">J a Scheme-like language</a> that is about as expressive as Scheme .. except for the
+lack of support for tail call elimination.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Srikumar</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-15T00:00:00+08:00" pubdate data-updated="true">Apr 15<span>th</span>, 2012</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/javascript/'>Javascript</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2012/04/15/j-expressions/" data-via="srikumarks" data-counturl="http://srikumarks.github.com/blog/2012/04/15/j-expressions/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/" title="Previous Post: Creating DSLs in Javascript using J-expressions">&laquo; Creating DSLs in Javascript using J-expressions</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2012/04/30/toy-language-using-j-expressions/" title="Next Post: Toy language using j-expressions">Toy language using j-expressions &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/12/30/exploring-grha-bhedams/">Exploring graha bhedams</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/12/27/scratch-pad-for-text-with-diacritics/">Scratch pad for text with diacritics</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/28/on-eval-being-evil/">On eval and evil.</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/04/30/toy-language-using-j-expressions/">Toy language using j-expressions</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section class="googleplus">
+  <h1>
+    <a href="https://plus.google.com/102694714835839603248?rel=author">
+      <img src="http://www.google.com/images/icons/ui/gprofile_button-32.png" width="32" height="32">
+      Google+
+    </a>
+  </h1>
+</section>
+
+
+
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("srikumarks", 4, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/srikumarks" class="twitter-follow-button" data-show-count="false">Follow @srikumarks</a>
+  
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - Srikumar -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

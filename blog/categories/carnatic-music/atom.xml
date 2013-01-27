@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Carnatic music | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/carnatic-music/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2013-01-06T02:53:37+08:00</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Exploring graha bhedams]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/12/30/exploring-grha-bhedams/"/>
+    <updated>2012-12-30T15:43:00+08:00</updated>
+    <id>http://srikumarks.github.com/blog/2012/12/30/exploring-grha-bhedams</id>
+    <content type="html"><![CDATA[<p>Here is a <a href="/demos/bhedam">demo web app</a> for exploring rāgās and their bhēdams.</p>
+
+<p>A few weeks ago, I had a conversation with Mr. Ramesh who showed me
+some amazing Excel wizardry and spells he'd cast to be able to take
+a raga and ask questions about its <a href="http://en.wikipedia.org/wiki/Graha_bhedam">graha bhēdams</a>. I hadn't realized
+until then that the question of what the scales of ragas turn into
+when you do bhēdams on them (graha or śruti bhēdam) involves a rather
+non-trivial mental transformation, though one that is pretty simple
+to do on a computer. So I resurrected a rāgā database that I'd scraped
+off Wikipedia's <a href="http://en.wikipedia.org/wiki/List_of_Janya_Ragas">Janya Rāgās</a> page some 4 years ago and made this
+<a href="/demos/bhedam">bhēdam explorer</a> web app.</p>
+
+<p>The app could use some visual love, but it serves the exploratory
+purpose as it stands. Have fun with it!</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Scratch pad for text with diacritics]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/"/>
+    <updated>2012-12-27T10:09:00+08:00</updated>
+    <id>http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics</id>
+    <content type="html"><![CDATA[<p>Roman text with a few choice diacritics are a common need when writing about
+Indian classical music. Creating unicode text with diacritics that can be
+ported between applications is in general a pain. So, I made a small in-browser
+app that serves as a <a href="/demos/diacritics">scratch pad for common diacritics</a>.</p>
+
+<h3>Usage</h3>
+
+<p>Straight forward. You just type your text in the provided box using normal
+roman characters first - ex: "Sankarabharanam". Once you've typed that in,
+you select each character to which you want to apply diacritical marks and
+click on the mark you want. You can also press the number key corresponding
+to the diacritical mark you want for the selected character. With this,
+you can get "Śankarābharaṇam".</p>
+
+<p>Your text is automatically saved to local storage, so you can visit the page
+any time and retrieve your text. You'll <em>never</em> lose text you key in.</p>
+
+<h3>Known issues</h3>
+
+<p>This works fine in Chrome and Safari on MacOSX, but not in Firefox. I haven't
+yet figured out why it doesn't work in Firefox. If you find that it works in
+Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Web Audio API | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/web-audio-api/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2013-01-06T02:53:37+08:00</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[A critique of Tuna]]></title>
+    <link href="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/"/>
+    <updated>2012-11-09T00:00:00+08:00</updated>
+    <id>http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna</id>
+    <content type="html"><![CDATA[<p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
+project. Here, I collect some thoughts about the code design decisions for their
+effects framework, since I myself have written <a href="http://github.com/srikumarks/steller">Steller</a>.</p>
+
+<!-- more -->
+
+
+<h2>Parameters</h2>
+
+<p>In Tuna, the effects module's parameters are presented to the API user as
+object properties and implemented using getters and setters. This is obviously
+simple from the perspective of a module user. However, it has several disadvantages -</p>
+
+<p>If a module contains another module and you want to expose that parameter,
+you're forced to write another getter/setter to handle the indirection. Such
+parameters cannot be passed around "by reference". The only thing you can
+do with them is to set/get their values. "By reference" passing is a simple
+way to expose an internal module's parameters to the module user which is an
+important kind of composability.</p>
+
+<p>Owing to the getter/setter approach, meta information about parameters such as
+their range, defaults, automation capabilities, etc. need to be stored elsewhere
+in a "defaults" object, instead of being directly associated with them.</p>
+
+<p>In some of the effects, some internal values and other parameters need to be
+recomputed when a couple of parameters change. In this case, the code for
+updating the dependent parameters is duplicated since it is not particularly
+convenient to write a shared function local when defining parameters using
+<code>Object.create</code> like this -</p>
+
+<p>``` js</p>
+
+<pre><code>//...
+baseFrequency: {
+    enumerable: true,
+    get: function () {return this._baseFrequency},
+    set: function (value) {
+        this._baseFrequency = 50 * Math.pow(10, value * 2);
+        this._excursionFrequency = Math.min(this.sampleRate / 2, this.baseFrequency * Math.pow(2, this._excursionOctaves));
+        this.filterBp.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+        this.filterPeaking.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+    }
+}, 
+excursionOctaves: {
+    enumerable: true,
+    get: function () {return this._excursionOctaves},
+    set: function (value) {
+        this._excursionOctaves = value;
+        this._excursionFrequency = Math.min(this.sampleRate / 2, this.baseFrequency * Math.pow(2, this._excursionOctaves));
+        this.filterBp.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+        this.filterPeaking.frequency.value = this._baseFrequency + this._excursionFrequency * this._sweep;
+    }
+}, 
+//...
+</code></pre>
+
+<p>```</p>
+
+<p>A simpler way to solve this would be to have parameters be first class objects
+that can be inspected, instead of just accessing and setting their values. Meta
+data about them can travel along with them. In <a href="http://github.com/srikumarks/steller">Steller</a>, watcher functions can
+be installed on parameters run code when the parameter's value changes.</p>
+
+<h2>Inheritance using the <code>prototype</code> mechanism</h2>
+
+<p>One of the code design choices that vastly complicates the code in this case
+is the choice of using <code>prototype</code> based inheritance to define the properties
+of instantiated effects modules. While this is common in the JS world,
+in this case it deprives the programmer of a local context in which to hide
+internal objects from the effects module's user and to write shared private
+code like in the case above. Any potential loss of efficiency in not using
+the prototype mechanism for this application is insignificant since object
+creation is not the thing we should be optimising for.</p>
+
+<p>The "define all methods and properties within the constructor function"
+approach is much more suitable in this situation.</p>
+]]></content>
+  </entry>
+  
+</feed>
