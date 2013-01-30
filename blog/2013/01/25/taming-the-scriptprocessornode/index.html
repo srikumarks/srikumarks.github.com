@@ -575,7 +575,7 @@ into an <code>onaudioprocess</code> handler.</p>
 
 <p>Now, let&#8217;s consider what happens if we try to implement the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
 (limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>. We can use
-<a href="#handlerWithStopTime">handlerWithStopTime</a> to take a first shot at it.
+<a href="#scriptWithStopTime">scriptWithStopTime</a> to take a first shot at it.
 While we&#8217;re there, we&#8217;ll also generalize the chime model to take a time
 at which to trigger the chime.</p>
 
@@ -641,7 +641,7 @@ the chime starts .. and we want it to be sample accurate.</p></li>
 
 <p>To solve the wasted computation problem, we can make the <code>onaudioprocess</code>
 be a no-op until the start time. This is best done by writing a
-<code>handlerWithStartStopTime</code> as we did with <code>handlerWithStopTime</code>.</p>
+<code>scriptWithStartStopTime</code> as we did with <code>scriptWithStopTime</code>.</p>
 
 <figure class='code'><figcaption><span><a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Removing wasted computation.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -719,7 +719,7 @@ need to receive any callbacks whatsoever until it is time to start generating
 samples. To achieve this, we need to schedule the node to connect and start
 just in time, say 0.1 seconds before the scheduled start time. To do this,
 we need to generalize <code>scriptWithStartStopTime</code> to work with the nodes
-to which it is expected to connect.</p>
+to which the script node is expected to connect.</p>
 
 <figure class='code'><figcaption><span><a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Delayed node setup.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>

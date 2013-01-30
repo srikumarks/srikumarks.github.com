@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-30T10:51:29+05:30</updated>
+  <updated>2013-01-30T10:56:48+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -351,7 +351,7 @@ osc.stop(stopTime);
 
 <p>Now, let's consider what happens if we try to implement the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
 (limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>. We can use
-<a href="#handlerWithStopTime">handlerWithStopTime</a> to take a first shot at it.
+<a href="#scriptWithStopTime">scriptWithStopTime</a> to take a first shot at it.
 While we're there, we'll also generalize the chime model to take a time
 at which to trigger the chime.</p>
 
@@ -399,7 +399,7 @@ the chime starts .. and we want it to be sample accurate.</p></li>
 
 <p>To solve the wasted computation problem, we can make the <code>onaudioprocess</code>
 be a no-op until the start time. This is best done by writing a
-<code>handlerWithStartStopTime</code> as we did with <code>handlerWithStopTime</code>.</p>
+<code>scriptWithStartStopTime</code> as we did with <code>scriptWithStopTime</code>.</p>
 
 <p>``` js <a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Removing wasted computation.
 function scriptWithStartStopTime(startTime, stopTime, handler) {</p>
@@ -446,7 +446,7 @@ need to receive any callbacks whatsoever until it is time to start generating
 samples. To achieve this, we need to schedule the node to connect and start
 just in time, say 0.1 seconds before the scheduled start time. To do this,
 we need to generalize <code>scriptWithStartStopTime</code> to work with the nodes
-to which it is expected to connect.</p>
+to which the script node is expected to connect.</p>
 
 <p>``` js <a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Delayed node setup.
 function scriptWithStartStopTime(input, output, startTime, stopTime, handler) {</p>
