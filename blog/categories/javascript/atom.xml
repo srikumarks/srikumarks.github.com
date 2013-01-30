@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-30T10:56:48+05:30</updated>
+  <updated>2013-01-30T11:03:10+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -676,11 +676,12 @@ inputs die.</p>
 <h2><a name="concluding-suggestions">Concluding suggestions</a></h2>
 
 <p>The use case worked through in this post demonstrates how abstractions built on
-other nodes do not extend to script nodes without special considerations. The two kinds of usages for script nodes discussed
-here -- sources and signal processors -- are likely to be very common scenarios,
-which makes it worthwhile to try to avoid the problems that arise with such usage
-of script nodes. Hence I recommend that the following features be built into the
-<a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> -</p>
+other nodes do not extend to script nodes without special considerations. The
+two kinds of usages for script nodes discussed here -- sources and signal
+processors -- are likely to be very common scenarios, which makes it worthwhile
+to try to avoid the problems that arise with such usage of script nodes. Having
+the following features built into the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> is therefore
+important.</p>
 
 <ol>
 <li>Permit creation of script nodes without inputs. This better models source
