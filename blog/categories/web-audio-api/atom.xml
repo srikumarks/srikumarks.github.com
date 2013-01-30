@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Web Audio API | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/web-audio-api/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-30T11:14:16+05:30</updated>
+  <updated>2013-01-30T11:30:26+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -51,7 +51,7 @@ specification.</p>
 </ol>
 
 
-<h2><a name="simple-chime-model">A simple chime model</a></h2>
+<h2><a name="simple-chime-model"></a>A simple chime model</h2>
 
 <p>Let's consider a simple kind of sound - a "chime", a decaying sinusoid
 oscillating at a given frequency. This can be implemented using an
@@ -136,7 +136,7 @@ osc.stop(AC.currentTime + 10.0);
 <p>}
 ```</p>
 
-<h2><a name="replacing-gain-node-with-scriptprocessornode">Replacing the gain node with a ScriptProcessorNode</a></h2>
+<h2><a name="replacing-gain-node-with-scriptprocessornode"></a>Replacing the gain node with a ScriptProcessorNode</h2>
 
 <p>Now let's consider what happens if we try to replace the gain node's behaviour
 (limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>.</p>
@@ -171,7 +171,7 @@ osc.stop(stopTime);
 <p>}
 ```</p>
 
-<h3><a name="vaninshing-script-node">Problem 1: The vanishing script node</a></h3>
+<h3><a name="vaninshing-script-node"></a>Problem 1: The vanishing script node</h3>
 
 <p>If you try to make a chime using <a href="#chime_jsgain">chime_jsgain</a>, you'll find
 that the sound stops abruptly well before the 10 seconds duration given.  This
@@ -213,7 +213,7 @@ var gain = keep(AC.createScriptProcessor(1024, 1, 1));
 <p>This will result in the script node being preserved during the course of
 the chime.</p>
 
-<h3><a name="eternal-script-node">Problem 2: The eternal script node</a></h3>
+<h3><a name="eternal-script-node"></a>Problem 2: The eternal script node</h3>
 
 <p>With the modifications of the preceding section, the oscillator node will
 disappear after 10 seconds but the script node will persist and continue to be
@@ -347,7 +347,7 @@ osc.stop(stopTime);
 <p>}
 ```</p>
 
-<h2><a name="replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></h2>
+<h2><a name="replacing-oscillator-with-scriptprocessornode"></a>Replacing the oscillator with a ScriptProcessorNode</h2>
 
 <p>Now, let's consider what happens if we try to implement the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
 (limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>. We can use
@@ -572,7 +572,7 @@ osc.stop(stopTime);
 <p>}  <br/>
 ```</p>
 
-<h2><a name="accounting-for-tail-time">Accounting for tail time</a></h2>
+<h2><a name="accounting-for-tail-time"></a>Accounting for tail time</h2>
 
 <p>The gain node is simple in that it produces one output sample for each input
 sample it receives on its input pin. Other node types, especially filter and
@@ -652,7 +652,7 @@ return node;
 <p>}
 ```</p>
 
-<h2><a name="reflections-on-api">Reflections on the API</a></h2>
+<h2><a name="reflections-on-api"></a>Reflections on the API</h2>
 
 <p>The <a href="#final-scriptWithStartStopTime">final form of scriptWithStartStopTime</a>
 expresses functionality that is essential to the use of script nodes as
@@ -673,7 +673,7 @@ currently provide any notification mechanisms for monitoring connections to a
 node's input and output so that processor nodes can self destruct when their
 inputs die.</p>
 
-<h2><a name="concluding-suggestions">Concluding suggestions</a></h2>
+<h2><a name="concluding-suggestions"></a>Concluding suggestions</h2>
 
 <p>The use case worked through in this post demonstrates how abstractions built on
 other nodes do not extend to script nodes without special considerations. The
@@ -703,7 +703,7 @@ been end-of-lifed.</li>
 </ol>
 
 
-<h3><a name="stellers-jsnode-model">PS: Steller's jsnode model</a></h3>
+<h3><a name="stellers-jsnode-model"></a>PS: Steller's jsnode model</h3>
 
 <p>The <a href="https://github.com/srikumarks/steller">Steller</a> library features a <a href="https://github.com/srikumarks/steller/blob/experimental_buildsys/src/models/jsnode.js">jsnode</a> model that wraps the API's script
 node into a node type that can be scheduled as discussed in this post. It also
