@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Web Audio API | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/web-audio-api/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-30T10:43:31+05:30</updated>
+  <updated>2013-01-30T10:51:29+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -202,26 +202,9 @@ return function (node) {
 <p>``` js Keeping around a global reference to the script node.
 function chime_jsgain(freq, output) {</p>
 
-<pre><code>var osc = AC.createOscillator();
-var stopTime = AC.currentTime + 10.0;
-osc.frequency.value = freq || 880.0;
-var gain = keep(AC.createScriptProcessor(1024, 1, 1)); // &lt;&lt; Modified line.
-gain.onaudioprocess = (function () {
-    var amplitude = 0.25;
-    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
-    return function (event) {
-        var i, N, inp, out;
-        inp = event.inputBuffer.getChannelData(0);
-        out = event.outputBuffer.getChannelData(0);
-        for (i = 0, N = out.length; i &lt; N; ++i, amplitude *= decay) {
-            out[i] = amplitude * inp[i];
-        }
-    };
-}());
-osc.connect(gain);
-gain.connect(output || AC.destination);
-osc.start(AC.currentTime);
-osc.stop(stopTime);
+<pre><code>// ...
+var gain = keep(AC.createScriptProcessor(1024, 1, 1));
+// ...
 </code></pre>
 
 <p>}

@@ -345,44 +345,10 @@ For this, we can use the following simple scheme &#8211;</p>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
 </pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">chime_jsgain</span><span class="p">(</span><span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
-</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
-</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
-</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span> <span class="c1">// &lt;&lt; Modified line.</span>
-</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-</span><span class='line'>        <span class="kd">var</span> <span class="nx">amplitude</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
-</span><span class='line'>        <span class="kd">var</span> <span class="nx">decay</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">exp</span><span class="p">(</span><span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">));</span>
-</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">N</span><span class="p">,</span> <span class="nx">inp</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
-</span><span class='line'>            <span class="nx">inp</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">N</span> <span class="o">=</span> <span class="nx">out</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">amplitude</span> <span class="o">*=</span> <span class="nx">decay</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">amplitude</span> <span class="o">*</span> <span class="nx">inp</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
-</span><span class='line'>            <span class="p">}</span>
-</span><span class='line'>        <span class="p">};</span>
-</span><span class='line'>    <span class="p">}());</span>
-</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
-</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
-</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
-</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="c1">// ...</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>    <span class="c1">// ...</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
