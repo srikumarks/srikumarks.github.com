@@ -9,8 +9,8 @@
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="Here is a demo web app for exploring rāgās and their bhēdams. A few weeks ago, I had a conversation with Mr. Ramesh who showed me
-some amazing &hellip;">
+  <meta name="description" content="The Web Audio API provides graph based API for audio generation and
+processing primitives with a focus on high performance and low latency. For &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -87,6 +87,104 @@ some amazing &hellip;">
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2013/01/25/taming-the-scriptprocessornode/">Taming the ScriptProcessorNode</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-25T21:20:00+05:30" pubdate data-updated="true">Jan 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>The <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> provides graph based API for audio generation and
+processing primitives with a focus on high performance and low latency. For
+custom processing that is not covered by the builtin native audio nodes, it
+provides a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> whose processing is determined by a Javascript
+function. Though the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> is presented like any other node
+type by the API, its behaviour differs from the other native nodes in some
+fundamental ways. This post examines some of these differences using a simple
+chime model as the use case, and derives some suggestions for the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>
+specification.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/01/25/taming-the-scriptprocessornode/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/01/25/digging-into-javascript-audio-nodes/">Taming the ScriptProcessorNode</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-25T21:20:00+05:30" pubdate data-updated="true">Jan 25<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>The <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> provides graph based API for audio generation and
+processing primitives with a focus on high performance and low latency. For
+custom processing that is not covered by the builtin native audio nodes, it
+provides a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> whose processing is determined by a Javascript
+function. Though the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> is presented like any other node
+type by the API, its behaviour differs from the other native nodes in some
+fundamental ways. This post examines some of these differences using a simple
+chime model as the use case, and derives some suggestions for the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>
+specification.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/01/25/digging-into-javascript-audio-nodes/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2012/12/30/exploring-grha-bhedams/">Exploring Graha Bhedams</a></h1>
     
     
@@ -103,7 +201,7 @@ some amazing &hellip;">
   
 
 
-<time datetime="2012-12-30T15:43:00+08:00" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
+<time datetime="2012-12-30T15:43:00+05:30" pubdate data-updated="true">Dec 30<span>th</span>, 2012</time>
         
       </p>
     
@@ -152,7 +250,7 @@ purpose as it stands. Have fun with it!</p>
   
 
 
-<time datetime="2012-12-27T10:09:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
+<time datetime="2012-12-27T10:09:00+05:30" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
         
       </p>
     
@@ -209,7 +307,7 @@ Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
   
 
 
-<time datetime="2012-11-09T00:00:00+08:00" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
+<time datetime="2012-11-09T00:00:00+05:30" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
         
       </p>
     
@@ -231,96 +329,6 @@ effects framework, since I myself have written <a href="http://github.com/srikum
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/08/28/on-eval-being-evil/">On Eval and Evil.</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-08-28T00:00:00+08:00" pubdate data-updated="true">Aug 28<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>&#8220;eval is evil&#8221; has become a maxim repeated in the Javascript community.
-Douglas Crockford, in <a href="http://shop.oreilly.com/product/9780596517748.do">Javascript: The Good Parts</a>, rightly advises against
-hidden and explicit uses of eval for security and clarity reasons. Now, I find
-<code>eval</code> useful to implement <a href="/gyan/2012/04/14/creating-dsls-in-javascript-using-j-expressions/">DSLs in Javascript</a>. The in-browser <a href="http://coffeescript.org">CoffeeScript</a>
-compiler wouldn&#8217;t be possible without <code>eval</code> (directly or indirectly). So, in
-this post, I wish to explore what appears interesting about <code>eval</code> that is
-relevant to building such DSLs.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2012/08/28/on-eval-being-evil/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/04/30/toy-language-using-j-expressions/">Toy Language Using J-expressions</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-04-30T00:00:00+08:00" pubdate data-updated="true">Apr 30<span>th</span>, 2012</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Posted a &#8220;stream of thought&#8221; compiler for a toy language based
-on the idea of j-expressions as a representation for ASTs.</p>
-
-<ul>
-<li><a href="http://github.com/srikumarks/jexpr">Code</a></li>
-<li><a href="http://srikumarks.github.com/jexpr">Docs</a></li>
-</ul>
-
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -336,6 +344,14 @@ on the idea of j-expressions as a representation for ASTs.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2013/01/25/taming-the-scriptprocessornode/">Taming the ScriptProcessorNode</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/01/25/digging-into-javascript-audio-nodes/">Taming the ScriptProcessorNode</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2012/12/30/exploring-grha-bhedams/">Exploring graha bhedams</a>
       </li>
     
@@ -345,14 +361,6 @@ on the idea of j-expressions as a representation for ASTs.</p>
     
       <li class="post">
         <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2012/08/28/on-eval-being-evil/">On eval and evil.</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2012/04/30/toy-language-using-j-expressions/">Toy language using j-expressions</a>
       </li>
     
   </ul>

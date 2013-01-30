@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Javascript | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/javascript/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-06T02:53:37+08:00</updated>
+  <updated>2013-01-30T10:30:35+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -14,9 +14,1492 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Taming the ScriptProcessorNode]]></title>
+    <link href="http://srikumarks.github.com/blog/2013/01/25/taming-the-scriptprocessornode/"/>
+    <updated>2013-01-25T21:20:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2013/01/25/taming-the-scriptprocessornode</id>
+    <content type="html"><![CDATA[<p>The <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> provides graph based API for audio generation and
+processing primitives with a focus on high performance and low latency. For
+custom processing that is not covered by the builtin native audio nodes, it
+provides a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> whose processing is determined by a Javascript
+function. Though the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> is presented like any other node
+type by the API, its behaviour differs from the other native nodes in some
+fundamental ways. This post examines some of these differences using a simple
+chime model as the use case, and derives some suggestions for the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>
+specification.</p>
+
+<!-- more -->
+
+
+<h4>Contents</h4>
+
+<ol>
+<li><a href="#simple-chime-model">A simple chime model</a></li>
+<li><a href="#abstracting-chime-model">Abstracting the chime model</a></li>
+<li><a href="#replacing-gain-node-with-scriptprocessornode">Replacing the gain node with a ScriptProcessorNode</a>
+
+<ol>
+<li><a href="#vanishing-script-node">Problem 1: The vanishing script node</a></li>
+<li><a href="#eternal-script-node">Problem 2: The eternal script node</a></li>
+</ol>
+</li>
+<li><a href="#replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></li>
+<li><a href="#accounting-for-tail-time">Accounting for tail time</a></li>
+<li><a href="#reflections-on-api">Reflections on the API</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#stellers-jsnode-model">PS: Steller's jsnode model</a></li>
+</ol>
+
+
+<h2><a name="simple-chime-model">A simple chime model</a></h2>
+
+<p>Let's consider a simple kind of sound - a "chime", a decaying sinusoid
+oscillating at a given frequency. This can be implemented using an
+<a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a> and a <a href="http://www.w3.org/TR/webaudio/#GainNode">GainNode</a> as follows -</p>
+
+<p><img src="/images/osc-gain.svg"></p>
+
+<p><code>js
+var AC = new webkitAudioContext();
+var osc = AC.createOscillator();
+osc.frequency.value = 880.0;
+var gain = AC.createGainNode();
+osc.connect(gain);
+gain.connect(AC.destination);
+gain.gain.value = 0.25;
+gain.gain.setTargetAtTime(0.0, AC.currentTime, 2.0);
+osc.start(AC.currentTime + 5.0);
+osc.stop(AC.currentTime + 15.0);
+</code></p>
+
+<p>The above code produces a single chime that lasts for about 10 seconds, with a
+decay time constant of 2 seconds. Though this is not very useful as it stands,
+it helps to illustrate a couple of aspects of nodes in the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>.</p>
+
+<p>First, we see two types of nodes being used -- a "source" node (the oscillator)
+which generates a signal without needing an input, and a "processor" node (the
+gain) which takes an input signal, does something with it and sends a modified
+signal to its output.</p>
+
+<p>Second, we see a time limited triggering of the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>. The node is
+triggered 5 seconds into the future and is stopped 10 seconds after it starts.
+The way the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> is designed, once the oscillator node has stopped,
+it becomes rather useless and needs to be discarded. This is because start/stop
+can be used only once on source nodes. Therefore when using an <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
+as in this example, the references to <code>osc</code> and <code>gain</code> are no longer necessary
+and we can add the following lines at the end of the above code block.</p>
+
+<p><code>js
+osc = null;
+gain = null;
+</code></p>
+
+<p>With no references holding the oscillator and gain nodes from garbage collection,
+one might think that they might be destroyed soon after the references are
+given up, before the oscillator gets a chance to generate any sound. Fortunately,
+the oscillator holds a reference to itself until its stop time is reached,
+after which the reference is released and the subgraph between the source and the
+context destination is destroyed. This behaviour of native source nodes is
+documented in the <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">Dynamic Lifetime</a> section of the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> documentation.</p>
+
+<h2><a name="abstracting-chime-model"></a>Abstracting the chime model</h2>
+
+<p>The chime model described in the previous section only plays one chime. This is
+practically useless in the real world. A more useful incarnation of the chime model
+would permit us to trigger a chime at any time we want and at any frequency
+we want as well. The model manages the nodes necessary for its function
+purely internally.</p>
+
+<p><img src="/images/chime.svg"></p>
+
+<p>This is easily encapsulated as a function --</p>
+
+<p>``` js
+var AC = new webkitAudioContext(); // We'll assume this here onwards.</p>
+
+<p>function chime(freq, output) {</p>
+
+<pre><code>var stopTime = AC.currentTime + 10.0;
+var osc = AC.createOscillator();
+osc.frequency.value = freq || 880.0;
+var gain = AC.createGainNode();
+osc.connect(gain);
+gain.connect(output || AC.destination);
+gain.gain.value = 0.25;
+gain.gain.setTargetAtTime(0.0, AC.currentTime, 2.0);
+osc.start(AC.currentTime);
+osc.stop(AC.currentTime + 10.0);
+// References to osc and gain are given up
+// upon return from chime().
+</code></pre>
+
+<p>}
+```</p>
+
+<h2><a name="replacing-gain-node-with-scriptprocessornode">Replacing the gain node with a ScriptProcessorNode</a></h2>
+
+<p>Now let's consider what happens if we try to replace the gain node's behaviour
+(limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>.</p>
+
+<p>``` js <a name="chime_jsgain">chime_jsgain</a> A straightforward replacement of the gain node with a script node.
+var AC = new webkitAudioContext();</p>
+
+<p>function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = AC.createScriptProcessor(1024, 1, 1);
+gain.onaudioprocess = (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event) {
+        var i, N, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0, N = out.length; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}());
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<h3><a name="vaninshing-script-node">Problem 1: The vanishing script node</a></h3>
+
+<p>If you try to make a chime using <a href="#chime_jsgain">chime_jsgain</a>, you'll find
+that the sound stops abruptly well before the 10 seconds duration given.  This
+is because the script node is garbage collected almost immediately.  This, I
+believe, is a WebKit implementation bug since the oscillator node, which has a
+persistent reference till stop time, holds a reference to the script node
+through its output, and yet the script node is garbage collected. A known
+workaround for this bug is to maintain a <em>global</em> reference to the script node.
+For this, we can use the following simple scheme --</p>
+
+<p>``` js <a name="keep">keep</a> Preserving script nodes.
+var scriptNodes = {};
+var keep = (function () {</p>
+
+<pre><code>var nextNodeID = 1;
+return function (node) {
+    node.id = node.id || (nextNodeID++);
+    scriptNodes[node.id] = node;
+    return node;
+};
+</code></pre>
+
+<p>}());
+```</p>
+
+<p>Using the <code>keep</code> utility, we can now rewrite <code>chime_jsnode</code> as --</p>
+
+<p>``` js Keeping around a global reference to the script node.
+function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = keep(AC.createScriptProcessor(1024, 1, 1)); // &lt;&lt; Modified line.
+gain.onaudioprocess = (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event) {
+        var i, N, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0, N = out.length; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}());
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>This will result in the script node being preserved during the course of
+the chime.</p>
+
+<h3><a name="eternal-script-node">Problem 2: The eternal script node</a></h3>
+
+<p>With the modifications of the preceding section, the oscillator node will
+disappear after 10 seconds but the script node will persist and continue to be
+processed. To prevent this, we make arrangement for the script node to be
+removed from the graph and for its global reference to be dropped once it has
+processed enough samples.</p>
+
+<p>``` js <a name="drop">drop</a> Dropping the global reference to a node.
+function drop(node) {</p>
+
+<pre><code>delete scriptNodes[node.id];
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>We incorporate the new <code>drop</code> function into <code>chime_jsnode</code> as follows --</p>
+
+<p>``` js A script implementation of gain node with proper end of life management.
+function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = keep(AC.createScriptProcessor(1024, 1, 1));
+gain.onaudioprocess = (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+    var finished = false;
+    return function (event) {
+        var i, N, inp, out;
+
+        if (finished) {
+            return; // Don't do anything after stopTime has elapsed.
+        }
+
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+
+        // Limit the number of samples we compute.
+        var now_samples = Math.floor(AC.sampleRate * AC.currentTime);
+        N = Math.min(out.length, stopTime_samples - now_samples);
+
+        for (i = 0; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+
+        if (N &lt; out.length) {
+            // Reached end time before end of buffer.
+            finished = true;
+            setTimeout(function () {
+                drop(gain);
+                osc.disconnect();
+                gain.disconnect();
+            }, 0);
+        }
+    };
+}());
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>We now have a script node based implementation that works like the native
+implementation in all respects. This kind of "stop time" behaviour can be
+lifted into a separate function that transforms a <code>function (event, toSamp) {...}</code>
+into an <code>onaudioprocess</code> handler.</p>
+
+<p>``` js <a name="scriptWithStopTime">scriptWithStopTime</a> End of life management of script nodes.
+function scriptWithStopTime(stopTime, handler) {</p>
+
+<pre><code>var node = keep(AC.createScriptProcessor(1024, 1, 1));
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+node.onaudioprocess = function (event) {
+    if (finished) {
+        return;
+    }
+
+    var t = Math.floor(AC.sampleRate * AC.currentTime);
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    handler(event, toSamp);
+
+    if (toSamp &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            event.node.disconnect();
+        }, 0);
+    }
+};
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Using <a href="#scriptWithStopTime">scriptWithStopTime</a>, we can now rewrite <code>chime_jsgain</code> as --</p>
+
+<p>``` js
+function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = scriptWithStopTime(stopTime, (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event, N) {
+        var i, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}()));
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<h2><a name="replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></h2>
+
+<p>Now, let's consider what happens if we try to implement the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
+(limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>. We can use
+<a href="#handlerWithStopTime">handlerWithStopTime</a> to take a first shot at it.
+While we're there, we'll also generalize the chime model to take a time
+at which to trigger the chime.</p>
+
+<p>``` js
+function chimeJS(t, freq, output) {</p>
+
+<pre><code>freq = freq || 880.0;
+t = Math.max(t || 0.0, AC.currentTime);
+var stopTime = t + 10.0;    
+var osc = scriptWithStopTime(stopTime, (function () {
+    var phi = 0, dphi = 2.0 * Math.PI * freq / AC.sampleRate;
+    return function (event, N) {
+        var i, out;
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0; i &lt; N; ++i, phi += dphi) {
+            out[i] = Math.sin(phi);
+        }
+    };
+}()));
+var gain = AC.createGainNode();
+gain.gain.value = 0.0;
+gain.gain.setValueAtTime(0.25, t);
+gain.gain.setTargetAtTime(0.0, t, 2.0);
+osc.connect(gain);
+gain.connect(output || AC.destination);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Exposing the start time makes obvious a few design flaws --</p>
+
+<ol>
+<li><p>If you schedule a chime into the future instead of "right now",
+the script node oscillator will keep running from "right now" until
+the end. The period from "now" to the scheduled start time is all
+wasted computation.</p></li>
+<li><p>The node responsible for the chime starting on time is the <code>gain</code>
+node. Since the oscillator is continuously running, the phase at
+which the oscillator begins will depend on the time passed in,
+but ideally we want the oscillator to start with phase 0 when
+the chime starts .. and we want it to be sample accurate.</p></li>
+</ol>
+
+
+<p>To solve the wasted computation problem, we can make the <code>onaudioprocess</code>
+be a no-op until the start time. This is best done by writing a
+<code>handlerWithStartStopTime</code> as we did with <code>handlerWithStopTime</code>.</p>
+
+<p>``` js <a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Removing wasted computation.
+function scriptWithStartStopTime(startTime, stopTime, handler) {</p>
+
+<pre><code>console.assert(stopTime &gt;= startTime);
+var node = keep(AC.createScriptProcessor(1024, 1, 1));
+var startTime_samples = Math.floor(AC.sampleRate * startTime);
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+node.onaudioprocess = function (event) {
+    if (finished) {
+        return;
+    }
+
+    var t = Math.floor(AC.currentTime * AC.sampleRate);
+    var fromSamp = Math.max(0, startTime_samples - t);
+
+    if (fromSamp &gt;= event.outputBuffer.length) {
+        // Not started yet.
+        return;
+    }
+
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    // Handler signature changed to include both start and stop indices.
+    handler(event, fromSamp, toSamp);
+
+    if (toSamp &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            event.node.disconnect();
+        }, 0);
+    }
+};
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>The above version saves <em>some</em> computation but not all. The JS node does not
+need to receive any callbacks whatsoever until it is time to start generating
+samples. To achieve this, we need to schedule the node to connect and start
+just in time, say 0.1 seconds before the scheduled start time. To do this,
+we need to generalize <code>scriptWithStartStopTime</code> to work with the nodes
+to which it is expected to connect.</p>
+
+<p>``` js <a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Delayed node setup.
+function scriptWithStartStopTime(input, output, startTime, stopTime, handler) {</p>
+
+<pre><code>startTime = Math.max(startTime, AC.currentTime);
+stopTime = Math.max(stopTime, AC.currentTime);
+console.assert(stopTime &gt;= startTime);
+
+var kBufferLength = 512; // samples
+var prepareAheadTime = 0.1; // seconds
+
+var startTime_samples = Math.floor(AC.sampleRate * startTime);
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+
+function onaudioprocess(event) {
+    if (finished) { return; }
+
+    var t = Math.floor(AC.currentTime * AC.sampleRate);
+    var fromSamp = Math.max(0, startTime_samples - t);
+
+    if (fromSamp &gt;= event.outputBuffer.length) {
+        return; // Not started yet.
+    }
+
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    // Handler signature changed to include both start and stop indices.
+    handler(event, fromSamp, toSamp);
+
+    if (toSamp &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            input &amp;&amp; input.disconnect();
+            event.node.disconnect();
+        }, 0);
+    }
+}
+
+function prepareNode() {
+    var node = keep(AC.createScriptProcessor(kBufferLength, 1, 1));
+    node.onaudioprocess = onaudioprocess;
+
+    // Setup the necessary connections.
+    input &amp;&amp; input.connect(node);
+    output &amp;&amp; node.connect(output);
+}
+
+var dt = startTime - AC.currentTime;
+if (dt &lt;= prepareAheadTime) {
+    prepareNode();
+} else {
+    setTimeout(prepareNode, Math.floor(1000 * dt));
+}
+
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>We can use <code>scriptWithStartStopTime</code> to include such dynamically determined
+source or processing nodes within a subgraph ... except when two such nodes
+need to be connected to each other and both remain unrealized for a while. In
+such cases, we can use an intermediate unity gain node for simplicity. Here
+then is our final chime model with a js node for the gain or the oscillator.</p>
+
+<p>``` js
+function chime_jsosc(t, freq, output) {</p>
+
+<pre><code>freq = freq || 880.0;
+t = Math.max(t || 0.0, AC.currentTime);
+var stopTime = t + 10.0;   
+
+var gain = AC.createGainNode();
+gain.gain.value = 0.0;
+gain.gain.setValueAtTime(0.25, t);
+gain.gain.setTargetAtTime(0.0, t, 2.0);
+gain.connect(output || AC.destination);
+
+var osc = scriptWithStartStopTime(null, gain, t, stopTime, (function () {
+    var phi = 0, dphi = 2.0 * Math.PI * freq / AC.sampleRate;
+    return function (event, fromSamp, toSamp) {
+        var i, out;
+        out = event.outputBuffer.getChannelData(0);
+        for (i = fromSamp; i &lt; toSamp; ++i, phi += dphi) {
+            out[i] = Math.sin(phi);
+        }
+    };
+}()));
+</code></pre>
+
+<p>}</p>
+
+<p>function chime_jsgain(t, freq, output) {</p>
+
+<pre><code>freq = freq || 880.0;
+t = Math.max(t || 0.0, AC.currentTime);
+output = output || AC.destination;
+var stopTime = t + 10.0;   
+
+var osc = AC.createOscillator();
+osc.frequency.value = freq;
+
+var gain = scriptWithStartStopTime(osc, output, t, stopTime, (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event, fromSamp, toSamp) {
+        var i, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = fromSamp; i &lt; toSamp; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}()));
+
+osc.start(t);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}  <br/>
+```</p>
+
+<h2><a name="accounting-for-tail-time">Accounting for tail time</a></h2>
+
+<p>The gain node is simple in that it produces one output sample for each input
+sample it receives on its input pin. Other node types, especially filter and
+convolution nodes, may "tail off" well after the input to these nodes has
+ceased. In other words, the true stop time of a node at which the node is
+free to be garbage collected is at the end of such a tail time, which may
+be only known when the node is running.</p>
+
+<p>A simple way to account for this is to have the handler passed to
+<code>scriptWithStartStopTime</code> use the <code>toSamp</code> argument only for information and
+return the number of samples it actually produced. If the handler has produced
+samples up to the buffer's capacity, then it cannot be stopped.  If it stopped
+somewhere before the end of the buffer, then it can be taken to be finished and
+cleanup can be triggered. This logic can be expressed in a modified
+<code>scriptWithStartStopTime</code> as shown below --</p>
+
+<p>``` js <a name="final-scriptWithStartStopTime">scriptWithStartStopTime</a> Supporting tail time.
+function scriptWithStartStopTime(input, output, startTime, stopTime, handler) {</p>
+
+<pre><code>startTime = Math.max(startTime, AC.currentTime);
+stopTime = Math.max(stopTime, AC.currentTime);
+console.assert(stopTime &gt;= startTime);
+
+var kBufferLength = 512; // samples
+var prepareAheadTime = 0.1; // seconds
+
+var startTime_samples = Math.floor(AC.sampleRate * startTime);
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+
+function onaudioprocess(event) {
+    if (finished) { return; }
+
+    var t = Math.floor(AC.currentTime * AC.sampleRate);
+    var fromSamp = Math.max(0, startTime_samples - t);
+
+    if (fromSamp &gt;= event.outputBuffer.length) {
+        return; // Not started yet.
+    }
+
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    // Return value of handler is used to decide when to stop. The handler is
+    // required to produce as many samples as possible. If it still can't fill
+    // up the buffer, it is deemed to have finished.
+    var samplesProduced = handler(event, fromSamp, toSamp);
+
+    if (fromSamp + samplesProduced &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            input &amp;&amp; input.disconnect();
+            event.node.disconnect();
+        }, 0);
+    }
+}
+
+function prepareNode() {
+    var node = keep(AC.createScriptProcessor(kBufferLength, 1, 1));
+    node.onaudioprocess = onaudioprocess;
+
+    // Setup the necessary connections.
+    input &amp;&amp; input.connect(node);
+    output &amp;&amp; node.connect(output);
+}
+
+var dt = startTime - AC.currentTime;
+if (dt &lt;= prepareAheadTime) {
+    prepareNode();
+} else {
+    setTimeout(prepareNode, Math.floor(1000 * dt));
+}
+
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<h2><a name="reflections-on-api">Reflections on the ScriptProcessorNode API</a></h2>
+
+<p>The <a href="#final-scriptWithStartStopTime">final form of scriptWithStartStopTime</a>
+expresses functionality that is essential to the use of script nodes as
+algorithmic signal sources and signal processors that can be scheduled
+to sample accuracy. Although this function adds the required functionality,
+the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> would be better off with a script node type whose
+lifetime can be managed just like the native nodes and suppor the
+dynamic behaviour available with the native nodes.</p>
+
+<p>Not having it builtin results in one kind of inconsistency that is awkward to
+work around - the fact that <code>start(t)</code> and <code>stop(t)</code> methods added in pure
+Javascript are not only necessary for script nodes that are pure signal
+generators, but also for signal processors. This is because a script node might
+otherwise end up wasting compute cycles either idling or computing audio that
+is going to be discarded by the rest of the chain. A <code>stop(t)</code> method is
+necessary for such processor nodes because the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> does not
+currently provide any notification mechanisms for monitoring connections to a
+node's input and output so that processor nodes can self destruct when their
+inputs die.</p>
+
+<h2><a name="conclusion">Conclusion</a></h2>
+
+<p>The use case worked through in this post demonstrates how abstractions built on
+other nodes do not extend to script nodes without special considerations. The two kinds of usages for script nodes discussed
+here -- sources and signal processors -- are likely to be very common scenarios,
+which makes it worthwhile to try to avoid the problems that arise with such usage
+of script nodes. Hence I recommend that the following features be built into the
+<a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> -</p>
+
+<ol>
+<li>Permit creation of script nodes without inputs. This better models source
+nodes. Passing 0 for "number of input channels" may be enough at the API
+level.</li>
+<li>Add <code>start(t)</code> and <code>stop(t)</code> methods to permit script nodes to be used as
+signal sources, with such nodes not taking up any system resources during
+their inactive periods.</li>
+<li>Specify a convention or API to support tail times beyond the time indicated
+in a <code>stop(t)</code> call. In the code in this post, the convention used is to
+have the event handler return the number of samples generated. Other
+solutions are possible.</li>
+<li>Add <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">dynamic lifetime</a> support similar to native nodes, whereby unreferenced
+"signal processor" script nodes driven by source nodes are automatically
+released once the source node finishes, even if the source node is itself a
+script node. To achieve this, the time at which the inputs cease must be
+available as part of the event structure passed to the <code>onaudioprocess</code>
+callback, so that the callback can begin any tail phase that it needs to
+complete before it commits suicide.</li>
+</ol>
+
+
+<h3><a name="stellers-jsnode-model">PS: Steller's jsnode model</a></h3>
+
+<p>The <a href="https://github.com/srikumarks/steller">Steller</a> library features a <a href="https://github.com/srikumarks/steller/blob/experimental_buildsys/src/models/jsnode.js">jsnode</a> model that wraps the API's script
+node into a node type that can be scheduled as discussed in this post. It also
+adds some conveniences such as multiple inputs (albeit single channel), and
+a-rate controllable and schedulable <a href="http://www.w3.org/TR/webaudio/#AudioParam">AudioParam</a> parameters. You can use
+Steller's jsnode model like this -</p>
+
+<p>``` html</p>
+
+<script src="http://sriku.org/lib/steller/steller.min.js"></script>
+
+
+<script>
+    var sh = new org.anclab.steller.Scheduler(new webkitAudioContext);
+    var jsn = sh.models.jsnode({
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        onaudioprocess: function (event) {
+            // ...
+            return toSamp - fromSamp;
+        }});
+    jsn.connect(AC.destination);
+    sh.play(sh.fire(function (clock) {
+        jsn.start(clock.t);
+        jsn.stop(clock.t + 10.0);
+    }));
+</script>
+
+
+<p>```</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Taming the ScriptProcessorNode]]></title>
+    <link href="http://srikumarks.github.com/blog/2013/01/25/digging-into-javascript-audio-nodes/"/>
+    <updated>2013-01-25T21:20:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2013/01/25/digging-into-javascript-audio-nodes</id>
+    <content type="html"><![CDATA[<p>The <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> provides graph based API for audio generation and
+processing primitives with a focus on high performance and low latency. For
+custom processing that is not covered by the builtin native audio nodes, it
+provides a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> whose processing is determined by a Javascript
+function. Though the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> is presented like any other node
+type by the API, its behaviour differs from the other native nodes in some
+fundamental ways. This post examines some of these differences using a simple
+chime model as the use case, and derives some suggestions for the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>
+specification.</p>
+
+<!-- more -->
+
+
+<h4>Contents</h4>
+
+<ol>
+<li><a href="#simple-chime-model">A simple chime model</a></li>
+<li><a href="#abstracting-chime-model">Abstracting the chime model</a></li>
+<li><a href="#replacing-gain-node-with-scriptprocessornode">Replacing the gain node with a ScriptProcessorNode</a>
+
+<ol>
+<li><a href="#vanishing-script-node">Problem 1: The vanishing script node</a></li>
+<li><a href="#eternal-script-node">Problem 2: The eternal script node</a></li>
+</ol>
+</li>
+<li><a href="#replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></li>
+<li><a href="#accounting-for-tail-time">Accounting for tail time</a></li>
+<li><a href="#reflections-on-api">Reflections on the API</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#stellers-jsnode-model">PS: Steller's jsnode model</a></li>
+</ol>
+
+
+<h2><a name="simple-chime-model">A simple chime model</a></h2>
+
+<p>Let's consider a simple kind of sound - a "chime", a decaying sinusoid
+oscillating at a given frequency. This can be implemented using an
+<a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a> and a <a href="http://www.w3.org/TR/webaudio/#GainNode">GainNode</a> as follows -</p>
+
+<p><img src="/images/osc-gain.svg"></p>
+
+<p><code>js
+var AC = new webkitAudioContext();
+var osc = AC.createOscillator();
+osc.frequency.value = 880.0;
+var gain = AC.createGainNode();
+osc.connect(gain);
+gain.connect(AC.destination);
+gain.gain.value = 0.25;
+gain.gain.setTargetAtTime(0.0, AC.currentTime, 2.0);
+osc.start(AC.currentTime + 5.0);
+osc.stop(AC.currentTime + 15.0);
+</code></p>
+
+<p>The above code produces a single chime that lasts for about 10 seconds, with a
+decay time constant of 2 seconds. Though this is not very useful as it stands,
+it helps to illustrate a couple of aspects of nodes in the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>.</p>
+
+<p>First, we see two types of nodes being used -- a "source" node (the oscillator)
+which generates a signal without needing an input, and a "processor" node (the
+gain) which takes an input signal, does something with it and sends a modified
+signal to its output.</p>
+
+<p>Second, we see a time limited triggering of the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>. The node is
+triggered 5 seconds into the future and is stopped 10 seconds after it starts.
+The way the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> is designed, once the oscillator node has stopped,
+it becomes rather useless and needs to be discarded. This is because start/stop
+can be used only once on source nodes. Therefore when using an <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
+as in this example, the references to <code>osc</code> and <code>gain</code> are no longer necessary
+and we can add the following lines at the end of the above code block.</p>
+
+<p><code>js
+osc = null;
+gain = null;
+</code></p>
+
+<p>With no references holding the oscillator and gain nodes from garbage collection,
+one might think that they might be destroyed soon after the references are
+given up, before the oscillator gets a chance to generate any sound. Fortunately,
+the oscillator holds a reference to itself until its stop time is reached,
+after which the reference is released and the subgraph between the source and the
+context destination is destroyed. This behaviour of native source nodes is
+documented in the <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">Dynamic Lifetime</a> section of the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> documentation.</p>
+
+<h2><a name="abstracting-chime-model"></a>Abstracting the chime model</h2>
+
+<p>The chime model described in the previous section only plays one chime. This is
+practically useless in the real world. A more useful incarnation of the chime model
+would permit us to trigger a chime at any time we want and at any frequency
+we want as well. The model manages the nodes necessary for its function
+purely internally.</p>
+
+<p><img src="/images/chime.svg"></p>
+
+<p>This is easily encapsulated as a function --</p>
+
+<p>``` js
+var AC = new webkitAudioContext(); // We'll assume this here onwards.</p>
+
+<p>function chime(freq, output) {</p>
+
+<pre><code>var stopTime = AC.currentTime + 10.0;
+var osc = AC.createOscillator();
+osc.frequency.value = freq || 880.0;
+var gain = AC.createGainNode();
+osc.connect(gain);
+gain.connect(output || AC.destination);
+gain.gain.value = 0.25;
+gain.gain.setTargetAtTime(0.0, AC.currentTime, 2.0);
+osc.start(AC.currentTime);
+osc.stop(AC.currentTime + 10.0);
+// References to osc and gain are given up
+// upon return from chime().
+</code></pre>
+
+<p>}
+```</p>
+
+<h2><a name="replacing-gain-node-with-scriptprocessornode">Replacing the gain node with a ScriptProcessorNode</a></h2>
+
+<p>Now let's consider what happens if we try to replace the gain node's behaviour
+(limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>.</p>
+
+<p>``` js <a name="chime_jsgain">chime_jsgain</a> A straightforward replacement of the gain node with a script node.
+var AC = new webkitAudioContext();</p>
+
+<p>function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = AC.createScriptProcessor(1024, 1, 1);
+gain.onaudioprocess = (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event) {
+        var i, N, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0, N = out.length; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}());
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<h3><a name="vaninshing-script-node">Problem 1: The vanishing script node</a></h3>
+
+<p>If you try to make a chime using <a href="#chime_jsgain">chime_jsgain</a>, you'll find
+that the sound stops abruptly well before the 10 seconds duration given.  This
+is because the script node is garbage collected almost immediately.  This, I
+believe, is a WebKit implementation bug since the oscillator node, which has a
+persistent reference till stop time, holds a reference to the script node
+through its output, and yet the script node is garbage collected. A known
+workaround for this bug is to maintain a <em>global</em> reference to the script node.
+For this, we can use the following simple scheme --</p>
+
+<p>``` js <a name="keep">keep</a> Preserving script nodes.
+var scriptNodes = {};
+var keep = (function () {</p>
+
+<pre><code>var nextNodeID = 1;
+return function (node) {
+    node.id = node.id || (nextNodeID++);
+    scriptNodes[node.id] = node;
+    return node;
+};
+</code></pre>
+
+<p>}());
+```</p>
+
+<p>Using the <code>keep</code> utility, we can now rewrite <code>chime_jsnode</code> as --</p>
+
+<p>``` js Keeping around a global reference to the script node.
+function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = keep(AC.createScriptProcessor(1024, 1, 1)); // &lt;&lt; Modified line.
+gain.onaudioprocess = (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event) {
+        var i, N, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0, N = out.length; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}());
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>This will result in the script node being preserved during the course of
+the chime.</p>
+
+<h3><a name="eternal-script-node">Problem 2: The eternal script node</a></h3>
+
+<p>With the modifications of the preceding section, the oscillator node will
+disappear after 10 seconds but the script node will persist and continue to be
+processed. To prevent this, we make arrangement for the script node to be
+removed from the graph and for its global reference to be dropped once it has
+processed enough samples.</p>
+
+<p>``` js <a name="drop">drop</a> Dropping the global reference to a node.
+function drop(node) {</p>
+
+<pre><code>delete scriptNodes[node.id];
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>We incorporate the new <code>drop</code> function into <code>chime_jsnode</code> as follows --</p>
+
+<p>``` js A script implementation of gain node with proper end of life management.
+function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = keep(AC.createScriptProcessor(1024, 1, 1));
+gain.onaudioprocess = (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+    var finished = false;
+    return function (event) {
+        var i, N, inp, out;
+
+        if (finished) {
+            return; // Don't do anything after stopTime has elapsed.
+        }
+
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+
+        // Limit the number of samples we compute.
+        var now_samples = Math.floor(AC.sampleRate * AC.currentTime);
+        N = Math.min(out.length, stopTime_samples - now_samples);
+
+        for (i = 0; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+
+        if (N &lt; out.length) {
+            // Reached end time before end of buffer.
+            finished = true;
+            setTimeout(function () {
+                drop(gain);
+                osc.disconnect();
+                gain.disconnect();
+            }, 0);
+        }
+    };
+}());
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>We now have a script node based implementation that works like the native
+implementation in all respects. This kind of "stop time" behaviour can be
+lifted into a separate function that transforms a <code>function (event, toSamp) {...}</code>
+into an <code>onaudioprocess</code> handler.</p>
+
+<p>``` js <a name="scriptWithStopTime">scriptWithStopTime</a> End of life management of script nodes.
+function scriptWithStopTime(stopTime, handler) {</p>
+
+<pre><code>var node = keep(AC.createScriptProcessor(1024, 1, 1));
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+node.onaudioprocess = function (event) {
+    if (finished) {
+        return;
+    }
+
+    var t = Math.floor(AC.sampleRate * AC.currentTime);
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    handler(event, toSamp);
+
+    if (toSamp &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            event.node.disconnect();
+        }, 0);
+    }
+};
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Using <a href="#scriptWithStopTime">scriptWithStopTime</a>, we can now rewrite <code>chime_jsgain</code> as --</p>
+
+<p>``` js
+function chime_jsgain(freq, output) {</p>
+
+<pre><code>var osc = AC.createOscillator();
+var stopTime = AC.currentTime + 10.0;
+osc.frequency.value = freq || 880.0;
+var gain = scriptWithStopTime(stopTime, (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event, N) {
+        var i, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0; i &lt; N; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}()));
+osc.connect(gain);
+gain.connect(output || AC.destination);
+osc.start(AC.currentTime);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}
+```</p>
+
+<h2><a name="replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></h2>
+
+<p>Now, let's consider what happens if we try to implement the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
+(limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>. We can use
+<a href="#handlerWithStopTime">handlerWithStopTime</a> to take a first shot at it.
+While we're there, we'll also generalize the chime model to take a time
+at which to trigger the chime.</p>
+
+<p>``` js
+function chimeJS(t, freq, output) {</p>
+
+<pre><code>freq = freq || 880.0;
+t = Math.max(t || 0.0, AC.currentTime);
+var stopTime = t + 10.0;    
+var osc = scriptWithStopTime(stopTime, (function () {
+    var phi = 0, dphi = 2.0 * Math.PI * freq / AC.sampleRate;
+    return function (event, N) {
+        var i, out;
+        out = event.outputBuffer.getChannelData(0);
+        for (i = 0; i &lt; N; ++i, phi += dphi) {
+            out[i] = Math.sin(phi);
+        }
+    };
+}()));
+var gain = AC.createGainNode();
+gain.gain.value = 0.0;
+gain.gain.setValueAtTime(0.25, t);
+gain.gain.setTargetAtTime(0.0, t, 2.0);
+osc.connect(gain);
+gain.connect(output || AC.destination);
+</code></pre>
+
+<p>}
+```</p>
+
+<p>Exposing the start time makes obvious a few design flaws --</p>
+
+<ol>
+<li><p>If you schedule a chime into the future instead of "right now",
+the script node oscillator will keep running from "right now" until
+the end. The period from "now" to the scheduled start time is all
+wasted computation.</p></li>
+<li><p>The node responsible for the chime starting on time is the <code>gain</code>
+node. Since the oscillator is continuously running, the phase at
+which the oscillator begins will depend on the time passed in,
+but ideally we want the oscillator to start with phase 0 when
+the chime starts .. and we want it to be sample accurate.</p></li>
+</ol>
+
+
+<p>To solve the wasted computation problem, we can make the <code>onaudioprocess</code>
+be a no-op until the start time. This is best done by writing a
+<code>handlerWithStartStopTime</code> as we did with <code>handlerWithStopTime</code>.</p>
+
+<p>``` js <a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Removing wasted computation.
+function scriptWithStartStopTime(startTime, stopTime, handler) {</p>
+
+<pre><code>console.assert(stopTime &gt;= startTime);
+var node = keep(AC.createScriptProcessor(1024, 1, 1));
+var startTime_samples = Math.floor(AC.sampleRate * startTime);
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+node.onaudioprocess = function (event) {
+    if (finished) {
+        return;
+    }
+
+    var t = Math.floor(AC.currentTime * AC.sampleRate);
+    var fromSamp = Math.max(0, startTime_samples - t);
+
+    if (fromSamp &gt;= event.outputBuffer.length) {
+        // Not started yet.
+        return;
+    }
+
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    // Handler signature changed to include both start and stop indices.
+    handler(event, fromSamp, toSamp);
+
+    if (toSamp &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            event.node.disconnect();
+        }, 0);
+    }
+};
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>The above version saves <em>some</em> computation but not all. The JS node does not
+need to receive any callbacks whatsoever until it is time to start generating
+samples. To achieve this, we need to schedule the node to connect and start
+just in time, say 0.1 seconds before the scheduled start time. To do this,
+we need to generalize <code>scriptWithStartStopTime</code> to work with the nodes
+to which it is expected to connect.</p>
+
+<p>``` js <a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Delayed node setup.
+function scriptWithStartStopTime(input, output, startTime, stopTime, handler) {</p>
+
+<pre><code>startTime = Math.max(startTime, AC.currentTime);
+stopTime = Math.max(stopTime, AC.currentTime);
+console.assert(stopTime &gt;= startTime);
+
+var kBufferLength = 512; // samples
+var prepareAheadTime = 0.1; // seconds
+
+var startTime_samples = Math.floor(AC.sampleRate * startTime);
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+
+function onaudioprocess(event) {
+    if (finished) { return; }
+
+    var t = Math.floor(AC.currentTime * AC.sampleRate);
+    var fromSamp = Math.max(0, startTime_samples - t);
+
+    if (fromSamp &gt;= event.outputBuffer.length) {
+        return; // Not started yet.
+    }
+
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    // Handler signature changed to include both start and stop indices.
+    handler(event, fromSamp, toSamp);
+
+    if (toSamp &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            input &amp;&amp; input.disconnect();
+            event.node.disconnect();
+        }, 0);
+    }
+}
+
+function prepareNode() {
+    var node = keep(AC.createScriptProcessor(kBufferLength, 1, 1));
+    node.onaudioprocess = onaudioprocess;
+
+    // Setup the necessary connections.
+    input &amp;&amp; input.connect(node);
+    output &amp;&amp; node.connect(output);
+}
+
+var dt = startTime - AC.currentTime;
+if (dt &lt;= prepareAheadTime) {
+    prepareNode();
+} else {
+    setTimeout(prepareNode, Math.floor(1000 * dt));
+}
+
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<p>We can use <code>scriptWithStartStopTime</code> to include such dynamically determined
+source or processing nodes within a subgraph ... except when two such nodes
+need to be connected to each other and both remain unrealized for a while. In
+such cases, we can use an intermediate unity gain node for simplicity. Here
+then is our final chime model with a js node for the gain or the oscillator.</p>
+
+<p>``` js
+function chime_jsosc(t, freq, output) {</p>
+
+<pre><code>freq = freq || 880.0;
+t = Math.max(t || 0.0, AC.currentTime);
+var stopTime = t + 10.0;   
+
+var gain = AC.createGainNode();
+gain.gain.value = 0.0;
+gain.gain.setValueAtTime(0.25, t);
+gain.gain.setTargetAtTime(0.0, t, 2.0);
+gain.connect(output || AC.destination);
+
+var osc = scriptWithStartStopTime(null, gain, t, stopTime, (function () {
+    var phi = 0, dphi = 2.0 * Math.PI * freq / AC.sampleRate;
+    return function (event, fromSamp, toSamp) {
+        var i, out;
+        out = event.outputBuffer.getChannelData(0);
+        for (i = fromSamp; i &lt; toSamp; ++i, phi += dphi) {
+            out[i] = Math.sin(phi);
+        }
+    };
+}()));
+</code></pre>
+
+<p>}</p>
+
+<p>function chime_jsgain(t, freq, output) {</p>
+
+<pre><code>freq = freq || 880.0;
+t = Math.max(t || 0.0, AC.currentTime);
+output = output || AC.destination;
+var stopTime = t + 10.0;   
+
+var osc = AC.createOscillator();
+osc.frequency.value = freq;
+
+var gain = scriptWithStartStopTime(osc, output, t, stopTime, (function () {
+    var amplitude = 0.25;
+    var decay = Math.exp(- 1.0 / (2.0 * AC.sampleRate));
+    return function (event, fromSamp, toSamp) {
+        var i, inp, out;
+        inp = event.inputBuffer.getChannelData(0);
+        out = event.outputBuffer.getChannelData(0);
+        for (i = fromSamp; i &lt; toSamp; ++i, amplitude *= decay) {
+            out[i] = amplitude * inp[i];
+        }
+    };
+}()));
+
+osc.start(t);
+osc.stop(stopTime);
+</code></pre>
+
+<p>}  <br/>
+```</p>
+
+<h2><a name="accounting-for-tail-time">Accounting for tail time</a></h2>
+
+<p>The gain node is simple in that it produces one output sample for each input
+sample it receives on its input pin. Other node types, especially filter and
+convolution nodes, may "tail off" well after the input to these nodes has
+ceased. In other words, the true stop time of a node at which the node is
+free to be garbage collected is at the end of such a tail time, which may
+be only known when the node is running.</p>
+
+<p>A simple way to account for this is to have the handler passed to
+<code>scriptWithStartStopTime</code> use the <code>toSamp</code> argument only for information and
+return the number of samples it actually produced. If the handler has produced
+samples up to the buffer's capacity, then it cannot be stopped.  If it stopped
+somewhere before the end of the buffer, then it can be taken to be finished and
+cleanup can be triggered. This logic can be expressed in a modified
+<code>scriptWithStartStopTime</code> as shown below --</p>
+
+<p>``` js <a name="final-scriptWithStartStopTime">scriptWithStartStopTime</a> Supporting tail time.
+function scriptWithStartStopTime(input, output, startTime, stopTime, handler) {</p>
+
+<pre><code>startTime = Math.max(startTime, AC.currentTime);
+stopTime = Math.max(stopTime, AC.currentTime);
+console.assert(stopTime &gt;= startTime);
+
+var kBufferLength = 512; // samples
+var prepareAheadTime = 0.1; // seconds
+
+var startTime_samples = Math.floor(AC.sampleRate * startTime);
+var stopTime_samples = Math.ceil(AC.sampleRate * stopTime);
+var finished = false;
+
+function onaudioprocess(event) {
+    if (finished) { return; }
+
+    var t = Math.floor(AC.currentTime * AC.sampleRate);
+    var fromSamp = Math.max(0, startTime_samples - t);
+
+    if (fromSamp &gt;= event.outputBuffer.length) {
+        return; // Not started yet.
+    }
+
+    var toSamp = Math.min(event.outputBuffer.length, stopTime_samples - t);
+
+    // Return value of handler is used to decide when to stop. The handler is
+    // required to produce as many samples as possible. If it still can't fill
+    // up the buffer, it is deemed to have finished.
+    var samplesProduced = handler(event, fromSamp, toSamp);
+
+    if (fromSamp + samplesProduced &lt; event.outputBuffer.length) {
+        finished = true;
+        setTimeout(function () {
+            drop(event.node);
+            input &amp;&amp; input.disconnect();
+            event.node.disconnect();
+        }, 0);
+    }
+}
+
+function prepareNode() {
+    var node = keep(AC.createScriptProcessor(kBufferLength, 1, 1));
+    node.onaudioprocess = onaudioprocess;
+
+    // Setup the necessary connections.
+    input &amp;&amp; input.connect(node);
+    output &amp;&amp; node.connect(output);
+}
+
+var dt = startTime - AC.currentTime;
+if (dt &lt;= prepareAheadTime) {
+    prepareNode();
+} else {
+    setTimeout(prepareNode, Math.floor(1000 * dt));
+}
+
+return node;
+</code></pre>
+
+<p>}
+```</p>
+
+<h2><a name="reflections-on-api">Reflections on the ScriptProcessorNode API</a></h2>
+
+<p>The <a href="#final-scriptWithStartStopTime">final form of scriptWithStartStopTime</a>
+expresses functionality that is essential to the use of script nodes as
+algorithmic signal sources and signal processors that can be scheduled
+to sample accuracy. Although this function adds the required functionality,
+the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> would be better off with a script node type whose
+lifetime can be managed just like the native nodes and suppor the
+dynamic behaviour available with the native nodes.</p>
+
+<p>Not having it builtin results in one kind of inconsistency that is awkward to
+work around - the fact that <code>start(t)</code> and <code>stop(t)</code> methods added in pure
+Javascript are not only necessary for script nodes that are pure signal
+generators, but also for signal processors. This is because a script node might
+otherwise end up wasting compute cycles either idling or computing audio that
+is going to be discarded by the rest of the chain. A <code>stop(t)</code> method is
+necessary for such processor nodes because the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> does not
+currently provide any notification mechanisms for monitoring connections to a
+node's input and output so that processor nodes can self destruct when their
+inputs die.</p>
+
+<h2><a name="conclusion">Conclusion</a></h2>
+
+<p>The use case worked through in this post demonstrates how abstractions built on
+other nodes do not extend to script nodes without special considerations. The two kinds of usages for script nodes discussed
+here -- sources and signal processors -- are likely to be very common scenarios,
+which makes it worthwhile to try to avoid the problems that arise with such usage
+of script nodes. Hence I recommend that the following features be built into the
+<a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> -</p>
+
+<ol>
+<li>Permit creation of script nodes without inputs. This better models source
+nodes. Passing 0 for "number of input channels" may be enough at the API
+level.</li>
+<li>Add <code>start(t)</code> and <code>stop(t)</code> methods to permit script nodes to be used as
+signal sources, with such nodes not taking up any system resources during
+their inactive periods. It would be possible to automatically add start/stop
+methods if the node is recognized as a source node at creation time.</li>
+<li>Specify a convention or API to support tail times beyond the time indicated
+in a <code>stop(t)</code> call. In the code in this post, the convention used is to
+have the event handler return the number of samples generated. Other
+solutions are possible.</li>
+<li>Add <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">dynamic lifetime</a> support similar to native nodes, whereby unreferenced
+"signal processor" script nodes driven by source nodes are automatically
+released once the source node finishes, even if the source node is itself a
+script node. To achieve this, the time at which the inputs cease must be
+available as part of the event structure passed to the <code>onaudioprocess</code>
+callback, so that the callback can begin any tail phase that it needs to
+complete before it commits suicide.</li>
+</ol>
+
+
+<h3><a name="stellers-jsnode-model">PS: Steller's jsnode model</a></h3>
+
+<p>The <a href="https://github.com/srikumarks/steller">Steller</a> library features a <a href="https://github.com/srikumarks/steller/blob/experimental_buildsys/src/models/jsnode.js">jsnode</a> model that wraps the API's script
+node into a node type that can be scheduled as discussed in this post. It also
+adds some conveniences such as multiple inputs (albeit single channel), and
+a-rate controllable and schedulable <a href="http://www.w3.org/TR/webaudio/#AudioParam">AudioParam</a> parameters. You can use
+Steller's jsnode model like this -</p>
+
+<p>``` html</p>
+
+<script src="http://sriku.org/lib/steller/steller.min.js"></script>
+
+
+<script>
+    var sh = new org.anclab.steller.Scheduler(new webkitAudioContext);
+    var jsn = sh.models.jsnode({
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        onaudioprocess: function (event) {
+            // ...
+            return toSamp - fromSamp;
+        }});
+    jsn.connect(AC.destination);
+    sh.play(sh.fire(function (clock) {
+        jsn.start(clock.t);
+        jsn.stop(clock.t + 10.0);
+    }));
+</script>
+
+
+<p>```</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[A critique of Tuna]]></title>
     <link href="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/"/>
-    <updated>2012-11-09T00:00:00+08:00</updated>
+    <updated>2012-11-09T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna</id>
     <content type="html"><![CDATA[<p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
 project. Here, I collect some thoughts about the code design decisions for their
@@ -100,7 +1583,7 @@ approach is much more suitable in this situation.</p>
   <entry>
     <title type="html"><![CDATA[On eval and evil.]]></title>
     <link href="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/"/>
-    <updated>2012-08-28T00:00:00+08:00</updated>
+    <updated>2012-08-28T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil</id>
     <content type="html"><![CDATA[<p>"eval is evil" has become a maxim repeated in the Javascript community.
 Douglas Crockford, in <a href="http://shop.oreilly.com/product/9780596517748.do">Javascript: The Good Parts</a>, rightly advises against
@@ -458,7 +1941,7 @@ Remember - there is always something "good" in every "evil" ;)</p>
   <entry>
     <title type="html"><![CDATA[Toy language using j-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions/"/>
-    <updated>2012-04-30T00:00:00+08:00</updated>
+    <updated>2012-04-30T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions</id>
     <content type="html"><![CDATA[<p>Posted a "stream of thought" compiler for a toy language based
 on the idea of j-expressions as a representation for ASTs.</p>
@@ -467,593 +1950,6 @@ on the idea of j-expressions as a representation for ASTs.</p>
 <li><a href="http://github.com/srikumarks/jexpr">Code</a></li>
 <li><a href="http://srikumarks.github.com/jexpr">Docs</a></li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[J-expressions]]></title>
-    <link href="http://srikumarks.github.com/blog/2012/04/15/j-expressions/"/>
-    <updated>2012-04-15T00:00:00+08:00</updated>
-    <id>http://srikumarks.github.com/blog/2012/04/15/j-expressions</id>
-    <content type="html"><![CDATA[<p><a href="http://www.json.org">JSON</a> has become a kind of de-facto standard for sharing data among services
-on the web. The Lisp folks have enjoyed this luxury ever since ... well ever
-since McCarthy made the language and his student implemented an interpreter for
-it. What's more, they have also had the luxury of using the same syntax for
-sharing <em>logic</em> .. and in fact take it for granted. This post is a proposal to
-bring that "luxury" to the web programming world.</p>
-
-<p><strong>Status:</strong> Draft. Comments welcome.</p>
-
-<!-- more -->
-
-
-<h2>Why is it useful to be able to share logic?</h2>
-
-<p>If you've already bought into Lisp, you may not need much convincing here.  If
-you do ask that question, I've written about <a href="/gyan/2012/04/14/creating-dsls-in-javascript-using-j-expressions">DSLs and J-expressions</a> in an
-earlier post that may be of interest to you.</p>
-
-<h2>Core syntax</h2>
-
-<ol>
-<li><p>A "J-expression" is an ordinary JSON-serializeable <strong>object</strong>, whose "first
-key" is taken to name an "operator", with the whole object serving as its
-"operand".</p></li>
-<li><p>A J-expression's key <strong>must</strong> be an identifier conforming to the following
-regular expression</p>
-
-<pre><code> (Letter|$|_)(Letter|DecimalDigit|$|_)*
-</code></pre></li>
-<li><p>We permit an extension to JSON whereby the key <strong>need not</strong> be a <em>quoted</em>
-string.  Nevertheless, a key <strong>must</strong> conform to the above regular expression
-even when quoted.</p></li>
-<li><p>Everything else -- numbers, strings, dates and arrays -- is just as
-specified in <a href="http://www.json.org">JSON</a>.</p></li>
-<li><p>We leave the question of how the "operator" must use the operands open in
-order to allow for eager and lazy computations, and meta-expressions.</p></li>
-<li><p>Every J-expression <strong>may</strong> have a <code>comment</code> key whose value is for human
-consumption and is therefore expected to have nil impact on the meaning of
-the expression to a program.  It <strong>may</strong> therefore be ignored by parsers
-and interpreters. J-expression writers, however, <strong>must</strong> strip out these
-comment fields before serializing these expressions. This means <code>comment</code>
-is a "reserved key".</p></li>
-<li><p>Every J-expression <strong>may</strong> have a <code>meta</code> key whose value is a <a href="http://www.json.org">JSON</a> value
-and is considered of some relevance to the system processing the script.
-This could include additional documentation references, version information,
-source URL for a specification of the operator, etc.  ..  the structure of
-which is left unspecified. J-expression writers, therefore, <strong>must not</strong>
-strip out the <code>meta</code> entry. This means <code>meta</code> is a "reserved key".</p></li>
-</ol>
-
-
-<h4>An example</h4>
-
-<p>``` js</p>
-
-<pre><code>{do: [
-    {fetchURL: "http://some.data.source/",
-      timeout: 30.0,
-       onfail: {raiseError: "URL not reachable"}},
-    {fork: [
-        {displayInElement: "element_id"},
-        {cacheInLocalStorage: "prefix"}
-        ]}]}
-</code></pre>
-
-<p>```</p>
-
-<p>The above script can be read as representing a "pipe" where the
-data is fetched from some URL and then (concurrently) displayed
-in an element and cached in local storage.</p>
-
-<h3>Some considerations</h3>
-
-<ol>
-<li><p>J-expression parsers are expected to be support both quoted and
-unquoted keys in order to enable "logic" and "data" to take the
-same form.</p></li>
-<li><p>J-expression writers are also allowed to use either form, but writing
-unquoted keys is preferred since it is more compact than quoted keys and
-closer in form to the notion of "programming" or "scripting".</p></li>
-</ol>
-
-
-<h4>The "first key" as the "operator"</h4>
-
-<p>Javascript implementations today preserve the order in which keys are inserted
-into objects when traversing keys as long as the keys are not array indices.
-Even when the specification does not require them to do so, Google considers it
-a de-facto standard that insertion and enumeration order must match whenever
-only string keys are involved - as noted in this <a href="http://code.google.com/p/v8/issues/detail?id=164">V8 bug</a>. This de-facto
-standard permits easy identification of the "first key" in a JSON expression as
-shown below --</p>
-
-<p>``` js</p>
-
-<pre><code>function jexpr_operator(jexpr) {
-    for (var first_key in jexpr) {
-        return first_key;
-    }
-}
-</code></pre>
-
-<p>```</p>
-
-<p>In languages such as <a href="http://www.python.org">Python</a>, <a href="http://ruby-lang.org">Ruby</a> and <a href="http://www.lua.org">Lua</a>, we cannot assume that the
-first key can be so easily identified, but since all these languages have
-custom syntax checking parsers for scanning JSON, it is a trivial extension to
-the parser to add a special key to an object to help identify the first key.</p>
-
-<blockquote><p>The key <code>__jexpr_operator__</code> is reserved for parsers so that they can
-indicate what the "first key" is by giving its name as the value of this key.
-For the rest of the system, the presence of this key overrides any key order
-already obeyed by the system. J-expression writers must use this key to
-determine which key to write first, but <strong>must not</strong> output this key itself.</p></blockquote>
-
-<p>Parsers in languages with objects that do not preserve identity between key
-insertion and enumeration order can add a small bit of logic to insert the
-above special key.</p>
-
-<p>``` js</p>
-
-<pre><code>function jexpr_operator(jexpr) {
-    if ("__jexpr_operator__" in jexpr) {
-        return jexpr.__jexpr_operator__;
-    } else {
-        for (var first_key in jexpr) {
-            return first_key;
-        }
-    }
-}
-</code></pre>
-
-<p>```</p>
-
-<p>Beyond this, we do not need the order of the other keys to be preserved and
-operator implementations should not make that assumption.</p>
-
-<h2>Can we build programming languages using j-expressions?</h2>
-
-<p>It sure looks possible to do so. For example, here is a (toy) compiler for
-<a href="https://github.com/srikumarks/jexpr">J a Scheme-like language</a> that is about as expressive as Scheme .. except for the
-lack of support for tail call elimination.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Creating DSLs in Javascript using J-expressions]]></title>
-    <link href="http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/"/>
-    <updated>2012-04-14T00:00:00+08:00</updated>
-    <id>http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions</id>
-    <content type="html"><![CDATA[<p>Scheme and Lisp have for long had powerful meta-programming abilities due to
-the syntax of their language being the same as the syntax for the main data
-structure supported by the language - the humble list. These languages are
-therefore well suited for inventing smaller special purpose "domain specific
-languages.</p>
-
-<p>Javascript, on the other hand, has a "full blown syntax" that makes
-meta-programming not for the faint of heart. One consequence of the lack of
-such ability is that developers have not had the benefit of the abstraction
-possible through small special purpose DSLs.</p>
-
-<p>Here, I outline an approach for creating DSLs in Javascript using the now
-prevalent <a href="http://www.json.org">JSON</a> format that is native to the language. The initial part tries
-to explain the kinds of scenarios in which one might consider building a DSL,
-which is important to have an idea about. Later, I get into the actual
-representation using JSON.</p>
-
-<!-- more -->
-
-
-<h2>When to make a DSL? .. or "Hunting of the Closure".</h2>
-
-<p>Under normal circumstances, you should consider developing your abstractions as
-"modules". Modules (or "libraries") offer basic encapsulation and hiding
-facilities that JS developers are familiar with. You can help them benefit from
-your work by leveraging that familiarity.</p>
-
-<p>On the rare occasion though, you might find yourself writing code that starts
-looking like a small "compiler"  or "runtime". In such circumstances, creating
-a DSL for that part of the system might be worthwhile to consider -- the purpose,
-again, being that it might ease the job of those that your package targets.</p>
-
-<p>A tipping point can happen when you discover that you are working with a
-category of objects that are "closed over" a suite of operations.  In
-mathematics, a set of objects is said to be "closed" with respect to a function
-if the function maps objects of the set to other objects in the same set and we
-say the set "has the closure property". But before we get to why that's
-significant, let's take a quick look at a simple example.</p>
-
-<h3>The "closure property" - an example</h3>
-
-<p>Say we want a framework to create and render visuals that vary in time -- like,
-maybe, umm ... a video? Here is a simple representation of such a visual, which
-we'll call a "show"  -</p>
-
-<p>``` js
-function show(t) {</p>
-
-<pre><code>// calculate...
-return image;
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Given such a "show", it is trivial to write a renderer for it -</p>
-
-<p>``` js
-function render(show, duration_ms) {</p>
-
-<pre><code>var startTime_ms = Date.now();
-requestAnimationFrame(function () {
-    var t = Date.now() - startTime_ms;
-    context.draw(show(t));
-    if (t &lt; duration_ms) {
-        requestAnimationFrame(arguments.callee);
-    }
-});
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Now, I want an operator which will delay a given show by a specified amount
-of time. Simple -</p>
-
-<p>``` js
-function delay(show, dt_ms) {</p>
-
-<pre><code>return function (t) {
-    return show(t - dt_ms);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<p>How about a "cut" from one show to another at a given time. Also simple -</p>
-
-<p>``` js
-function cut(when, show1, show2) {</p>
-
-<pre><code>return function (t) {
-    return (t &lt; when ? show1 : show2)(t);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<p>Now, if we represent video clips using such <code>show</code>s, those two functions under
-which the set of <code>show</code>s is closed give us all we need to make an edited
-production .... because we can combine them.  Note that <code>delay</code> takes a show
-and produces a show, and so does <code>cut</code> ... which takes <em>two</em> shows, yes, but
-that's the same idea. This kind of combinatorial power is valuable when
-modelling a domain.</p>
-
-<blockquote><h5>ShowTime</h5>
-
-<p>The interface to <a href="http://www.muvee.com">muvee Reveal</a>'s rendering engine "ShowTime" is built
-around this kind of an abstraction. The details of <a href="http://muvee-style-authoring.googlecode.com/svn/doc/main/ShowTime_-_the_muvee_timeline.html">ShowTime</a> and the DSL for
-<a href="http://muvee-style-authoring.googlecode.com">authoring muvee's "styles"</a> built on top of this API are available publicly.
-In this case, the DSL abstracts away implementation details such as the deep
-nesting of functions that might result in a naive implementation.</p></blockquote>
-
-<h2>Functions are closed under composition</h2>
-
-<p>Here is what makes the closure property worth hunting for --</p>
-
-<blockquote><p>When you have several functions under which your set is closed, it is also
-closed under <em>arbitrary compositions</em> of these functions.</p></blockquote>
-
-<p>So, well, why bother with a DSL? Why not just use function composition?  One
-reason is that, in the real world, your set is closed with respect to each of
-these functions <em>only under certain constraints</em>. These constraints might make
-it difficult to predict whether a given composition of these functions is a
-valid operation in your domain. You will need to validate a composition
-<em>before</em> you begin to act on it, which becomes difficult if you only have
-access to the composition and not the parts. A DSL that abstracts over these
-constraints by exposing only that subset of compositions that are valid in the
-domain would therefore be of great help to people reusing your work.</p>
-
-<blockquote><p>The DSL's purpose, then, is to hide the constraints under which closure is
-possible and composition operations are valid - i.e. where composition and
-use are context sensitive.</p></blockquote>
-
-<h2>A DSL for asynchronous operations</h2>
-
-<p>Let's consider an example where having a DSL seems beneficial - composing
-asynchronous operations.</p>
-
-<p>It is a common convention for a function that does some asynchronous action to
-accept "callback" and "errback" functions to call when it succeeds or fails
-respectively.  Composing such actions into sequences soon turns into what is
-usually referred to as "callback hell" and the person reading the source soon
-looses sight of the whole flow of control.</p>
-
-<p>So, do we satisfy our "DSL criteria" here?</p>
-
-<ol>
-<li>Closure property? CHECK. A sequence of operations is itself an operation.</li>
-<li>Constraints? CHECK. A sequence is allowed to proceed normally only when an
-operation doesn't fail. There are many error handling strategies when an
-operation fails and we may not have seen all of them yet.</li>
-</ol>
-
-
-<p>Let's then make a small DSL for sequencing asynchronous operations.</p>
-
-<h2>Representing asynchronous operations</h2>
-
-<p>First we're going to need a way to define new asynchonous operations
-in plain Javascript for our "primitives". A simple representation is
-to model an async operation (let's call them "asop"s for convenience)
-as a function that takes a specific set of arguments as follows --</p>
-
-<p>``` js
-function asop(M, input, success, failure) {</p>
-
-<pre><code>// ...
-// we're good.
-M.start(success, input, M.end, M.failure);
-
-// Something bad happened
-M.start(failure, M.error("bad", input, success, failure), M.end, M.end);
-</code></pre>
-
-<p>}
-```</p>
-
-<p>The function takes four parameters -</p>
-
-<ol>
-<li><code>M</code> is a module that provides facilities for starting an asop --
-<code>M.start</code> and a terminal operation <code>M.end</code> that does nothing and stops all
-processing.</li>
-<li><code>input</code> is the data being passed to the asop to do its job.</li>
-<li><code>success</code> is an asop to start once this asop finishes
-successfully.</li>
-<li><code>failure</code> is an asop to start if this asop cannot be completed for
-some reason.</li>
-</ol>
-
-
-<blockquote><p>Note that an asop is recursively defined in terms of and makes use of two
-other asops <code>success</code> and <code>failure</code>, which themselves have the <em>same</em>
-function signature.</p></blockquote>
-
-<p>We take <code>M.error</code> to be a utility that produces an error object that captures
-the current error state to pass to the failure operation. Here is a simple
-definition for <code>M</code> --</p>
-
-<p>``` js
-M.start = function (op, input, succ, fail) {</p>
-
-<pre><code>setTimeout(function () {
-    op(M, input, succ, fail);
-}, 0);
-</code></pre>
-
-<p>};
-M.error = function (descr, input, succ, fail) {</p>
-
-<pre><code>return new Error({descr: descr, input: input, success: succ, failure: fail});
-</code></pre>
-
-<p>},
-M.end = function () {};
-```</p>
-
-<h2>Sequencing two operations</h2>
-
-<p>Since our operations are ordinary functions, we can write a "sequencing operator"
-for combining two operations as a higher order function as follows --</p>
-
-<p>``` js
-function seq(first, next) {</p>
-
-<pre><code>return function (M, input, success, failure) {
-    M.start(first, input, seq(next, success), failure);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<p><em>Note</em>: This looks like infinite recursion, but it will terminate automatically
-when <code>M.end</code> is passed for <code>next</code> because, we define <code>M.end</code> to be the operation
-that doesn't continue further.</p>
-
-<h2>Making a chain of operations</h2>
-
-<p>The humble <code>seq</code> operator can now be put to use to chain an arbitrary
-number of operations given as an array ---</p>
-
-<p>``` js
-function chain(operations) {</p>
-
-<pre><code>var revOps = operations.slice(0).reverse();
-return function (M, input, success, failure) {
-    M.start(revOps.reduce(seq, success), input, M.end, failure);
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<h2>Umm ... why do we need a DSL again?</h2>
-
-<p>You'd be right in asking that question. So far, it looks like the language is
-expressive enough to let us code up all these compositions using plain higher
-order functions. So, let me throw something into the mix that might cause you
-to stumble if you think such functions alone are adequate.</p>
-
-<p>Consider the exchanges that happen between a web server and a client (browser).
-A client instructs a web server to perform some operation, the server gets back
-when done, or with progress notifications, then the client does a few async things
-like store some data locally, and then makes the next request and so on. The ability
-to represent a <em>sequence</em> of actions directly is a boon to take care of all these
-exchanges happening between these two dance partners.</p>
-
-<blockquote><h3>So here is your task - ###</h3>
-
-<p>Abstract away the transaction to survive a termination of connection with the
-server. I'm not talking packet loss here.  I'm talking about the user
-initiating a series of operations and in the middle of things shutting down
-the browser. What I want to happen is for the operations to continue exactly
-from wherever they left off -- because I cannot "throw an exception" and undo
-a rocket launch. If the client was waiting for a response from the server, it
-should again start waiting for that response; and by implication if the
-server was doing something and found out that the connection had terminated
-at the "next" step, it should've stored away whatever it needed to do to
-continue, and must resume that when the user connects again, maybe after some
-mild handshaking. In particular, it is <em>not</em> acceptable to terminate the
-operation sequence just because the browser was closed.</p></blockquote>
-
-<p>Trying to do something like this is where reifying processes as functions
-breaks down. To a lisp/scheme programmer, a solution would already be in sight
--- use s-expressions to represent operations and store away instructions in
-that form. What might we do in the Javascript world?</p>
-
-<h2>J expressions</h2>
-
-<p>The image I have in my mind now is Douglas Crockford standing with legs apart,
-arms folded, cape flying with a speech bubble pointing to his head saying
-"JSON to the rescue!".</p>
-
-<p>Since we have our framework taking care of coordinating the success and failure
-of operations, all it takes to <em>specify</em> an operation, given a known set of
-named "primitive" operations, are the following --</p>
-
-<ol>
-<li>The <em>name</em> of the operation to start.</li>
-<li>An <em>input</em> object to customize any details of the operation.</li>
-</ol>
-
-
-<p>So, there you go, we can change our representation of an operation from being
-a function to something that looks like -</p>
-
-<p><code>js
-{opname: input_object}
-</code></p>
-
-<p>(Technically, that'll be <code>{"opname": input_object}</code> in JSON, but let's ignore
-that difference since it is <em>serializable</em> using JSON, which is what's
-important.)</p>
-
-<p>The input object is also a literal or computed <em>value</em> which we restrict to
-JSON-serializable values. The named primitive operation can itself be provided
-in a module as a function that takes the whole spec object and does what it is
-supposed to do.</p>
-
-<p>We can now specify a series of operations as an array in this form -</p>
-
-<p>``` js
-{do: [</p>
-
-<pre><code>{ask: "Enter file name: ", 
-    type: "file"},
-{fetchFile: {showProgress: "progress_bar"},
-    reportInterval: 1.0},
-{spawn: {withRetry: {uploadToDropbox: {user: "cat", password: "meow"}},
-            maxTries: 5,
-              onfail: {do: [
-                        {deleteTempFiles: null},
-                        {ask: "Dropbox upload failed. Try again?", 
-                            type: "yes/no",
-                             yes: {retry: true},
-                              no: {raise: "Give up"}}
-                        ]}}},
-{cacheInLocalStore: "prefix"},
-{showInElement: "element_id"}
-</code></pre>
-
-<p>]}
-```</p>
-
-<p>If we are given the primitive operations as members of a module <code>M</code>, we can run
-a primitive operation as follows -</p>
-
-<p>``` js
-function runPrimitiveOperation(opspec) {</p>
-
-<pre><code>return function (M, input, success, failure) {
-    for (var opname in opspec) {
-        M[opname](M, opspec, input, success, failure);
-        return;
-    }
-};
-</code></pre>
-
-<p>}
-```</p>
-
-<blockquote><h4>Note</h4>
-
-<p>Here I'm making use of the fact that JS engines today such as V8 always
-enumerate the keys of an object in the order in which they were added to it.
-This is what lets us identify the <em>first</em> key as determining the operation to
-start with the operation implementation knowing what to make of the other
-keys in the expression, the parameters and so on.</p>
-
-<p>Also note that we've put in a pipeline here -- i.e. <code>ask</code> gets a file name
-that it passes as input to <code>fetchFile</code> which passes the fetched file data to
-<code>spawn</code>, and so on. <code>spawn</code> is a higher order operation, since it takes an
-operation as the argument to perform concurrently, while continuing by
-passing its input through to <code>cacheInLocalStore</code>.</p></blockquote>
-
-<p>Our framework, then, serves as an interpreter for this mini language, providing
-the necessary abstractions on <em>how</em> we expect these operations to be executed
-behind the scenes. What is important is that <em>users</em> of our framework are not
-forced to think about browser shutdown/restart cases and can simply assume
-that the infrastructure we provide will "do the right thing".</p>
-
-<p>Now, I'm not going to go into details of what one actually needs to do to
-<em>implement</em> the shutdown/restart behaviour, but at this point, it ought to be
-clear enough that given a serializable representation of "operations still left
-to do" and a serializable representation of the input to give to this sequence,
-we can dump both at any point to disk (plus some book keeping info) and resume
-after a browser/server restart. We'll need to do that for <em>each task sequence</em>
-that's active at the point the shutdown is initiated.</p>
-
-<p>The important thing is that the one writing the script can focus on writing the
-script instead of the operational details.</p>
-
-<h2>Recap</h2>
-
-<p>The main takeaways from this post are the following -</p>
-
-<ol>
-<li><p>If you find categories of objects in your problem domain that are closed
-over a number of functions and you want to abstract away the constraints
-under which those functions can be combined, you may find it useful to
-create a DSL for your domain.</p></li>
-<li><p>The consistent implementation of key enumeration order of objects in
-Javascript engines allows us to write <strong>specifications of composeable
-computations</strong> using generic JSON-serializable notation that we can call
-"J-expressions".</p>
-
-<pre><code>{opname: main_parameter,
-    keyword1: value1,
-    keyword2: value2,
-    ...}
-</code></pre></li>
-<li><p>J-expressions, in combination with functions that implement what the
-operation named "opname" is supposed to do, are then a systematic way to
-approach DSL construction within Javascript.  The notation is as expressive
-as s-expressions. For instance, here is a way to write a "higher order
-asop" :)</p>
-
-<pre><code>{lambda_the_ultimate: ["arg"],
-    do: [
-        {step1: ..},
-        {step2: ..}
-    ]}
-</code></pre></li>
-</ol>
 
 ]]></content>
   </entry>
