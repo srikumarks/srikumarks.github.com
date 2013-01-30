@@ -1144,10 +1144,6 @@ level.</li>
 <li>Add <code>start(t)</code> and <code>stop(t)</code> methods to permit script nodes to be used as
 signal sources, with such nodes not taking up any system resources during
 their inactive periods.</li>
-<li>Specify a convention or API to support tail times beyond the time indicated
-in a <code>stop(t)</code> call. In the code in this post, the convention used is to
-have the event handler return the number of samples generated. Other
-solutions are possible.</li>
 <li>Add <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">dynamic lifetime</a> support similar to native nodes, whereby unreferenced
 &#8220;signal processor&#8221; script nodes driven by source nodes are automatically
 released once the source node finishes, even if the source node is itself a
@@ -1155,6 +1151,9 @@ script node. To achieve this, the time at which the inputs cease must be
 available as part of the event structure passed to the <code>onaudioprocess</code>
 callback, so that the callback can begin any tail phase that it needs to
 complete before it commits suicide.</li>
+<li>Specify a convention and/or API to support tail times beyond
+the time indicated in a stop(t) call or after its inputs have
+been end-of-lifed.</li>
 </ol>
 
 
@@ -1249,7 +1248,7 @@ Steller&#8217;s jsnode model like this -</p>
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013/01/25/digging-into-javascript-audio-nodes/" title="Previous Post: Taming the ScriptProcessorNode">&laquo; Taming the ScriptProcessorNode</a>
+        <a class="basic-alignment left" href="/blog/2012/12/30/exploring-grha-bhedams/" title="Previous Post: Exploring graha bhedams">&laquo; Exploring graha bhedams</a>
       
       
     </p>
@@ -1269,10 +1268,6 @@ Steller&#8217;s jsnode model like this -</p>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/01/25/digging-into-javascript-audio-nodes/">Taming the ScriptProcessorNode</a>
-      </li>
-    
-      <li class="post">
         <a href="/blog/2012/12/30/exploring-grha-bhedams/">Exploring graha bhedams</a>
       </li>
     
@@ -1282,6 +1277,10 @@ Steller&#8217;s jsnode model like this -</p>
     
       <li class="post">
         <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/08/28/on-eval-being-evil/">On eval and evil.</a>
       </li>
     
   </ul>
