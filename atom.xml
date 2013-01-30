@@ -4,7 +4,7 @@
   <title><![CDATA[Codaholic]]></title>
   <link href="http://srikumarks.github.com/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-30T10:39:06+05:30</updated>
+  <updated>2013-01-30T10:43:31+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -46,7 +46,7 @@ specification.</p>
 <li><a href="#replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></li>
 <li><a href="#accounting-for-tail-time">Accounting for tail time</a></li>
 <li><a href="#reflections-on-api">Reflections on the API</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#concluding-suggestions">Concluding suggestions</a></li>
 <li><a href="#stellers-jsnode-model">PS: Steller&#8217;s jsnode model</a></li>
 </ol>
 
@@ -1018,7 +1018,7 @@ cleanup can be triggered. This logic can be expressed in a modified
 </span></code></pre></td></tr></table></div></figure>
 
 
-<h2><a name="reflections-on-api">Reflections on the ScriptProcessorNode API</a></h2>
+<h2><a name="reflections-on-api">Reflections on the API</a></h2>
 
 <p>The <a href="#final-scriptWithStartStopTime">final form of scriptWithStartStopTime</a>
 expresses functionality that is essential to the use of script nodes as
@@ -1028,7 +1028,7 @@ the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> would be better of
 lifetime can be managed just like the native nodes and suppor the
 dynamic behaviour available with the native nodes.</p>
 
-<p>Not having it builtin results in one kind of inconsistency that is awkward to
+<p>Not having it builtin results in an inconsistency that is awkward to
 work around - the fact that <code>start(t)</code> and <code>stop(t)</code> methods added in pure
 Javascript are not only necessary for script nodes that are pure signal
 generators, but also for signal processors. This is because a script node might
@@ -1039,7 +1039,7 @@ currently provide any notification mechanisms for monitoring connections to a
 node&#8217;s input and output so that processor nodes can self destruct when their
 inputs die.</p>
 
-<h2><a name="conclusion">Conclusion</a></h2>
+<h2><a name="concluding-suggestions">Concluding suggestions</a></h2>
 
 <p>The use case worked through in this post demonstrates how abstractions built on
 other nodes do not extend to script nodes without special considerations. The two kinds of usages for script nodes discussed
