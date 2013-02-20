@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Tech | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/tech/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2013-02-20T07:45:34+05:30</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[iPad2 wish ..]]></title>
+    <link href="http://srikumarks.github.com/blog/2011/01/26/ipad2-wish/"/>
+    <updated>2011-01-26T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2011/01/26/ipad2-wish</id>
+    <content type="html"><![CDATA[<p>Now that macworld is near, it is time for an iPad wish list.</p>
+
+<p>I have only one item on it - and it is the addition of a wacom tablet-like
+stylus interface on top of the capacitive touch screen. Camera? Nope don't
+need. I want a pad where I can draw and scribble with precision, flipping the
+stylus on its head to turn it into an eraser. Ah! That'll be a heaven of a
+tablet with both touch and stylus support.</p>
+]]></content>
+  </entry>
+  
+</feed>
