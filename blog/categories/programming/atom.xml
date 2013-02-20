@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Programming | Codaholic]]></title>
   <link href="http://srikumarks.github.com/blog/categories/programming/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-02-20T07:45:34+05:30</updated>
+  <updated>2013-02-20T07:52:29+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -33,7 +33,7 @@ the mere mention of Smalltalk, check out this 1987 video demo of the
     <updated>2010-09-18T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2010/09/18/primes-go-vs-haskell</id>
     <content type="html"><![CDATA[<p>Recently, a friend of mine pointed out a
-<a href="http://golang.org/doc/go_tutorial.html#tmp_353">concurrent implementation of Eratosthenes' prime sieve</a>
+<a href="http://golang.org/s/prime-sieve">concurrent implementation of Eratosthenes' prime sieve</a>
 expressed in google’s Go programming language. I
 couldn’t resist trying a Haskell version of that same approach.</p>
 
@@ -99,6 +99,8 @@ only need to replace</p>
 </code></pre>
 
 <p>to get that kind of performance boost.  Black art indeed!</p>
+
+<p>PS: The <a href="http://golang.org/doc/go_tutorial.html#tmp_353">old link</a> to the Go sieve code is now broken.</p>
 ]]></content>
   </entry>
   
