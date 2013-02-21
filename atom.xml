@@ -4,7 +4,7 @@
   <title><![CDATA[Codaholic]]></title>
   <link href="http://srikumarks.github.com/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-02-20T07:52:29+05:30</updated>
+  <updated>2013-02-21T06:01:06+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -221,12 +221,14 @@ purely internally.</p>
 
 <p>If you try to make a chime using <a href="#chime_jsgain">chime_jsgain</a>, you&#8217;ll find
 that the sound stops abruptly well before the 10 seconds duration given.  This
-is because the script node is garbage collected almost immediately.  This, I
-believe, is a WebKit implementation bug since the oscillator node, which has a
+is because the script node is garbage collected almost immediately.  This is
+a <a href="https://code.google.com/p/chromium/issues/detail?id=82795">WebKit implementation bug</a>. The oscillator node, which has a
 persistent reference till stop time, holds a reference to the script node
 through its output, and yet the script node is garbage collected. A known
 workaround for this bug is to maintain a <em>global</em> reference to the script node.
 For this, we can use the following simple scheme &#8211;</p>
+
+<p><em>edit</em>: Added link to issue.</p>
 
 <figure class='code'><figcaption><span><a name="keep">keep</a> Preserving script nodes.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
