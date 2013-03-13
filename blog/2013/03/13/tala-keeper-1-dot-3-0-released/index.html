@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Social hash as identity - Codaholic</title>
+  <title>Tala Keeper 1.3.0 released - Codaholic</title>
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="Can we derive identity from the structure of our social network?">
+  <meta name="description" content="Tala Keeper version 1.3.0 is the first public release of a visual metronome
+for practicing music involving complex (or simple) time structures. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://srikumarks.github.com/blog/2012/01/03/social-hash-as-identity/">
+  <link rel="canonical" href="http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -83,7 +84,7 @@
   
   <header>
     
-      <h1 class="entry-title">Social Hash as Identity</h1>
+      <h1 class="entry-title">Tala Keeper 1.3.0 Released</h1>
     
     
       <p class="meta">
@@ -99,81 +100,17 @@
   
 
 
-<time datetime="2012-01-03T00:00:00+05:30" pubdate data-updated="true">Jan 3<span>rd</span>, 2012</time>
+<time datetime="2013-03-13T11:44:00+05:30" pubdate data-updated="true">Mar 13<span>th</span>, 2013</time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>(This is a &#8220;brain-dump&#8221; post).</p>
+<div class="entry-content"><p><a href="http://sriku.org/TalaKeeper">Tala Keeper</a> version 1.3.0 is the first public release of a visual metronome
+for practicing music involving complex (or simple) time structures.</p>
 
-<p>Many write-ups and studies on social networks and privacy issues talk about the
-risk of using one’s personal information disclosed within social networks for
-identity theft. That made me think about whether it is really possible for an
-identity thief to steal my entire social environment and history or whether
-such theft is simply an indication of how broken the current paper-world
-identity systems are in the digital age?</p>
-
-<p>Enter the “social hash” – a short identification string that can be generated
-from the data in your social network’s history that is very highly likely to be
-unique to you and very difficult to duplicate in a &#8220;prove your identity&#8221;
-challenge.</p>
-
-<!-- more -->
-
-
-<p>Let us consider a person’s &#8220;social history&#8221; (say on Facebook for simplicity,
-but the same concept will also apply to google+) – i.e. The linear sequence of
-events related to the establishment and termination of all my connections with
-other people on the network. Each event is one of –</p>
-
-<pre><code>joined on DATETIME at GPSLOC
-added/removed PERSON to/from CIRCLE on DATETIME at GPSLOC
-checkedin at GPSLOC on DATETIME
-</code></pre>
-
-<p>A stream of such events is guaranteed to be linear in time since they are all
-actions taken by one person &#8230; with no two events having the same time time
-stamp even at the 1 second resolution. A strong hash of this kind of “history
-string” therefore captures &#8220;me&#8221; in terms of my social network history.
-Authorities needing to verify my identity can request for a “recent ID” that
-they can then verify using a back channel into the social network doubling as
-an identity service.</p>
-
-<p>Now, what should we use in the PERSON field for an event? It seems obvious that
-it has to be that person&#8217;s ID hash at that particular event’s DATETIME when the
-event happened. With this scheme, it seems to me that the only way an attacker
-can steal your identity is to actually login as you – i.e. only by hacking into
-your account. If the trusted social network and id provider (do I hear a &#8220;yeah,
-right&#8221;?) uses a multiple-point verification system prior to revealing a recent
-social snapshot hash of you to yourself (ex: SMS one time passcode and digipass
-like banks do now), an attacker might have reasonable difficulty in producing
-your ID string even if s/he has your account hacked. At each such point at
-which your ID is verified successfully by an agency, a new verification event
-can also be tacked on to your running hash similar to a checkin. Also, identity
-verification can be conducted without actually having anyone peek into your
-facebook/g+ account since they will only need to check hash equality. Existing
-social networks will also be able to generate such an ID for you
-retrospectively as well.</p>
-
-<p>Do you think such a &#8220;social snapshot&#8221; as an ID can make identity theft
-difficult? There are lots of corner cases and improvements that can be done on
-the basic scheme described above, but my question is only that of viability of
-the scheme.</p>
-
-<p>Computing the hash at any given time would not require the whole history string
-to be available. I described the hash as though it were computed on one long
-string for simplicity, but we only need to compute a recursive hash – i.e. when
-a new event happens, a new hash is generated by hashing together the most
-recent hash and the new event record. This way, you don’t have to keep a long
-running string anywhere in the social network provider’s backend.</p>
-
-<p>If the provider’s user interface and APIs never reveal time information to a
-sub-second accuracy and a millisecond accurate time stamp is used in the hash,
-this can provide some additional difficulty in reproducing the hash as well.</p>
-
-<p>(PS: My original google plus post on this is <a href="https://plus.google.com/102694714835839603248/posts/b7SsJTR1GGV">here</a>.)</p>
+<p><a href="https://itunes.apple.com/us/app/tala-keeper/id614784414?ls=1&amp;mt=8">Download from App Store</a></p>
 </div>
 
 
@@ -196,12 +133,12 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
   
 
 
-<time datetime="2012-01-03T00:00:00+05:30" pubdate data-updated="true">Jan 3<span>rd</span>, 2012</time>
+<time datetime="2013-03-13T11:44:00+05:30" pubdate data-updated="true">Mar 13<span>th</span>, 2013</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ideas/'>Ideas</a>
+    <a class='category' href='/blog/categories/education/'>Education</a>, <a class='category' href='/blog/categories/music/'>Music</a>
   
 </span>
 
@@ -210,7 +147,7 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
     
       <div class="sharing">
   
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2012/01/03/social-hash-as-identity/" data-via="srikumarks" data-counturl="http://srikumarks.github.com/blog/2012/01/03/social-hash-as-identity/" >Tweet</a>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released/" data-via="srikumarks" data-counturl="http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -221,10 +158,8 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/" title="Previous Post: Newcomb's problem and quantum physics">&laquo; Newcomb's problem and quantum physics</a>
+        <a class="basic-alignment left" href="/blog/2013/01/30/taming-the-scriptprocessornode/" title="Previous Post: Taming the ScriptProcessorNode">&laquo; Taming the ScriptProcessorNode</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2012/04/12/classes-and-javascript/" title="Next Post: Classes and Javascript">Classes and Javascript &raquo;</a>
       
     </p>
   </footer>

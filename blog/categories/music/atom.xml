@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Music | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/music/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2013-03-13T11:56:17+05:30</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Tala Keeper 1.3.0 released]]></title>
+    <link href="http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released/"/>
+    <updated>2013-03-13T11:44:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released</id>
+    <content type="html"><![CDATA[<p><a href="http://sriku.org/TalaKeeper">Tala Keeper</a> version 1.3.0 is the first public release of a visual metronome
+for practicing music involving complex (or simple) time structures.</p>
+
+<p><a href="https://itunes.apple.com/us/app/tala-keeper/id614784414?ls=1&amp;mt=8">Download from App Store</a></p>
+]]></content>
+  </entry>
+  
+</feed>
