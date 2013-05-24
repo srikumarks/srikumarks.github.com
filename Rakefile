@@ -25,6 +25,7 @@ themes_dir      = ".themes"   # directory for blog files
 new_post_ext    = "markdown"  # default new post file extension when using the new_post task
 new_page_ext    = "markdown"  # default new page file extension when using the new_page task
 server_port     = "4000"      # port for preview server eg. localhost:4000
+s3bucket        = "s3://sriku.org/"     # Amazon s3 bucket location for blog.
 
 
 desc "Initial setup for Octopress: copies the default theme into the path of Jekyll's generator. Rake install defaults to rake install[classic] to install a different theme run rake install[some_theme_name]"
@@ -260,6 +261,21 @@ multitask :push do
     system "git push origin #{deploy_branch} --force"
     puts "\n## Github Pages deploy complete"
   end
+end
+
+desc "deploy public directory to Amazon S3 indicated in source/ directory"
+task :s3push do
+    puts "## Deploying public folder to Amazon S3"
+    # Check if preview posts exist, which should not be published
+    if File.exists?(".preview-mode")
+        puts "## Found posts in preview mode, regenerating files ..."
+        File.delete(".preview-mode")
+        Rake::Task[:generate].execute
+    end
+
+    cd "public" do
+        system "s3cmd sync ./ s3://sriku.org/"
+    end
 end
 
 desc "Update configurations to support publishing to root or sub directory"
