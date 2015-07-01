@@ -9,8 +9,8 @@
   <meta name="author" content="Srikumar">
 
   
-  <meta name="description" content="How would Newcomb&#8217;s problem look like in the physical world, taking quantum
-physics into account? Specifically, would Omega need to know &hellip;">
+  <meta name="description" content="If you have been programming in Java and C++ for a while and are used to
+thinking about problems in terms of classes and inheritance, you may find &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,13 +19,14 @@ physics into account? Specifically, would Omega need to know &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://srikumarks.github.com/blog/page/3/">
+  <link rel="canonical" href="http://srikumarks.github.com/blog/page/3">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="/javascripts/ender.js"></script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
   <link href="/atom.xml" rel="alternate" title="Codaholic" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
@@ -35,7 +36,7 @@ physics into account? Specifically, would Omega need to know &hellip;">
   
   <script type="text/javascript">
     var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-37337144-1']);
+    _gaq.push(['_setAccount', 'UA-30922656-1']);
     _gaq.push(['_trackPageview']);
 
     (function() {
@@ -87,6 +88,116 @@ physics into account? Specifically, would Omega need to know &hellip;">
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2012/04/12/classes-and-javascript/">Classes and Javascript</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-04-12T00:00:00+05:30" pubdate data-updated="true">Apr 12<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>If you have been programming in Java and C++ for a while and are used to
+thinking about problems in terms of classes and inheritance, you may find
+yourself struggling with Javascript since it has only objects.  This post is to
+&#8211; a) provide you with a perspective on why programming with only objects is
+powerful and b) show you how to translate the class-based concepts you&#8217;re used
+to thinking in into the Javascript world.</p>
+
+<p>The Javascript object system comes from the language <a href="http://en.wikipedia.org/wiki/Self_(programming_language)">Self</a> which pioneered
+object oriented modeling using prototypes, along with many dynamic compilation
+techniques that later went into the HotSpot JVM. The motivation for destroying
+the class-object dichotomy is that working with classes forces you to think
+about object categories well before you&#8217;ve really understood the problem
+domain.  The claim by the Self folks is that your approximate and often
+downright invalid classes get frozen in over time and the system becomes harder
+to adapt to changes in understanding about the problem being modelled.</p>
+
+<p>So, what <em>are</em> classes? &#8230; really?</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2012/04/12/classes-and-javascript/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/01/03/social-hash-as-identity/">Social Hash as Identity</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-01-03T00:00:00+05:30" pubdate data-updated="true">Jan 3<span>rd</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>(This is a &#8220;brain-dump&#8221; post).</p>
+
+<p>Many write-ups and studies on social networks and privacy issues talk about the
+risk of using one’s personal information disclosed within social networks for
+identity theft. That made me think about whether it is really possible for an
+identity thief to steal my entire social environment and history or whether
+such theft is simply an indication of how broken the current paper-world
+identity systems are in the digital age?</p>
+
+<p>Enter the “social hash” – a short identification string that can be generated
+from the data in your social network’s history that is very highly likely to be
+unique to you and very difficult to duplicate in a &#8220;prove your identity&#8221;
+challenge.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2012/01/03/social-hash-as-identity/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2011/05/07/newcombs-problem-and-quantum-physics/">Newcomb&#8217;s Problem and Quantum Physics</a></h1>
     
     
@@ -103,7 +214,7 @@ physics into account? Specifically, would Omega need to know &hellip;">
   
 
 
-<time datetime="2011-05-07T00:00:00+08:00" pubdate data-updated="true">May 7<span>th</span>, 2011</time>
+<time datetime="2011-05-07T00:00:00+05:30" pubdate data-updated="true">May 7<span>th</span>, 2011</time>
         
       </p>
     
@@ -136,7 +247,107 @@ or B?</p>
 
     </article>
   
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/01/26/ipad2-wish/">iPad2 Wish ..</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-01-26T00:00:00+05:30" pubdate data-updated="true">Jan 26<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Now that macworld is near, it is time for an iPad wish list.</p>
+
+<p>I have only one item on it - and it is the addition of a wacom tablet-like
+stylus interface on top of the capacitive touch screen. Camera? Nope don&#8217;t
+need. I want a pad where I can draw and scribble with precision, flipping the
+stylus on its head to turn it into an eraser. Ah! That&#8217;ll be a heaven of a
+tablet with both touch and stylus support.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2011/01/05/photon-polarization/">Photon Polarization</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2011-01-05T00:00:00+05:30" pubdate data-updated="true">Jan 5<span>th</span>, 2011</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="http://lesswrong.com/lw/pz/decoherence_as_projection/">Decoherence as projection</a> discusses photon polarization as a phenomenon that
+can only be explained quantum mechanically even at the macroscopic level –</p>
+
+<blockquote><p>&#8220;All right,&#8221; you say, &#8220;that just seems weird.&#8221; You pause. &#8220;So it’s probably something quantum.&#8221;
+Indeed it is.</p></blockquote>
+
+<p>Not so quick I think. It is true that if you do this experiment at the
+microscopic level with single photons you’ll have no classical explanation for
+it – erm classical physics doesn’t know about photons to begin with.</p>
+
+<p>At the macroscopic level though, oscillating <code>E</code> and <code>B</code> fields is adequate to
+explain it. A polarizer projects the vectors along it’s polarization. So in the
+“3 filters at 45 degrees” case you get two projections. The fields are
+oscillating in a specific direction after passing through the first filter, say
+with amplitude <code>E</code>. When it hits the second filter, the projected component is
+simply <code>E cos 45</code>. This projected vector is now oscillating along the second
+polarizer’s direction. When this hits the third filter this gets projected
+again and becomes <code>E cos 45 cos 45</code>. So the final amplitude has an energy that is
+<code>pow(cos 45, 4)</code> which is ¼. That is exactly what the quantum explanation gives.</p>
+
+<p>What macroscopic aspect of plane polarization does the above explanation not cover?</p>
+</div>
+  
+  
+
+
+    </article>
+  
   <div class="pagination">
+    
+      <a class="prev" href="/blog/page/4/">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -151,6 +362,14 @@ or B?</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2013/03/13/tala-keeper-1-dot-3-0-released/">Tala Keeper 1.3.0 released</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/01/30/taming-the-scriptprocessornode/">Taming the ScriptProcessorNode</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2012/12/30/exploring-grha-bhedams/">Exploring graha bhedams</a>
       </li>
     
@@ -160,14 +379,6 @@ or B?</p>
     
       <li class="post">
         <a href="/blog/2012/11/09/a-critique-of-tuna/">A critique of Tuna</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2012/08/28/on-eval-being-evil/">On eval and evil.</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2012/04/30/toy-language-using-j-expressions/">Toy language using j-expressions</a>
       </li>
     
   </ul>

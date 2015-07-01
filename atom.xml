@@ -4,7 +4,7 @@
   <title><![CDATA[Codaholic]]></title>
   <link href="http://srikumarks.github.com/atom.xml" rel="self"/>
   <link href="http://srikumarks.github.com/"/>
-  <updated>2013-01-06T02:53:37+08:00</updated>
+  <updated>2013-04-16T10:20:59+05:30</updated>
   <id>http://srikumarks.github.com/</id>
   <author>
     <name><![CDATA[Srikumar]]></name>
@@ -14,9 +14,1091 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Tala Keeper 1.3.0 released]]></title>
+    <link href="http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released/"/>
+    <updated>2013-03-13T11:44:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2013/03/13/tala-keeper-1-dot-3-0-released</id>
+    <content type="html"><![CDATA[<p><a href="http://sriku.org/TalaKeeper">Tala Keeper</a> version 1.3.0 is the first public release of a visual metronome
+for practicing music involving complex (or simple) time structures.</p>
+
+<p><a href="https://itunes.apple.com/us/app/tala-keeper/id614784414?mt=8&uo=4" target="itunes_store"style="display:inline-block;overflow:hidden;background:url(http://linkmaker.itunes.apple.com/htmlResources/assets/images/web/linkmaker/badge_appstore-lrg.png) no-repeat;width:135px;height:40px;@media only screen{background-image:url(http://linkmaker.itunes.apple.com/htmlResources/assets/images/web/linkmaker/badge_appstore-lrg.svg);}"></a></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Taming the ScriptProcessorNode]]></title>
+    <link href="http://srikumarks.github.com/blog/2013/01/30/taming-the-scriptprocessornode/"/>
+    <updated>2013-01-30T21:20:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2013/01/30/taming-the-scriptprocessornode</id>
+    <content type="html"><![CDATA[<p>The <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> provides graph based API for audio generation and
+processing primitives with a focus on high performance and low latency. For
+custom processing that is not covered by the builtin native audio nodes, it
+provides a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> whose processing is determined by a Javascript
+function. Though the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> is presented like any other node
+type by the API, its behaviour differs from the other native nodes in some
+fundamental ways. This post examines some of these differences using a simple
+chime model as the use case, and derives some suggestions for the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>
+specification.</p>
+
+<!-- more -->
+
+
+<h4>Contents</h4>
+
+<ol>
+<li><a href="#simple-chime-model">A simple chime model</a></li>
+<li><a href="#abstracting-chime-model">Abstracting the chime model</a></li>
+<li><a href="#replacing-gain-node-with-scriptprocessornode">Replacing the gain node with a ScriptProcessorNode</a>
+
+<ol>
+<li><a href="#vanishing-script-node">Problem 1: The vanishing script node</a></li>
+<li><a href="#eternal-script-node">Problem 2: The eternal script node</a></li>
+</ol>
+</li>
+<li><a href="#replacing-oscillator-with-scriptprocessornode">Replacing the oscillator with a ScriptProcessorNode</a></li>
+<li><a href="#accounting-for-tail-time">Accounting for tail time</a></li>
+<li><a href="#reflections-on-api">Reflections on the API</a></li>
+<li><a href="#concluding-suggestions">Concluding suggestions</a></li>
+<li><a href="#stellers-jsnode-model">PS: Steller&#8217;s jsnode model</a></li>
+</ol>
+
+
+<h2><a name="simple-chime-model"></a>A simple chime model</h2>
+
+<p>Let&#8217;s consider a simple kind of sound - a &#8220;chime&#8221;, a decaying sinusoid
+oscillating at a given frequency. This can be implemented using an
+<a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a> and a <a href="http://www.w3.org/TR/webaudio/#GainNode">GainNode</a> as follows -</p>
+
+<p><img src="http://srikumarks.github.com/images/osc-gain.svg"></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">AC</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">webkitAudioContext</span><span class="p">();</span>
+</span><span class='line'><span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
+</span><span class='line'><span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'><span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createGainNode</span><span class="p">();</span>
+</span><span class='line'><span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'><span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'><span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
+</span><span class='line'><span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">setTargetAtTime</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">);</span>
+</span><span class='line'><span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">5.0</span><span class="p">);</span>
+</span><span class='line'><span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">15.0</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The above code produces a single chime that lasts for about 10 seconds, with a
+decay time constant of 2 seconds. Though this is not very useful as it stands,
+it helps to illustrate a couple of aspects of nodes in the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a>.</p>
+
+<p>First, we see two types of nodes being used &#8211; a &#8220;source&#8221; node (the oscillator)
+which generates a signal without needing an input, and a &#8220;processor&#8221; node (the
+gain) which takes an input signal, does something with it and sends a modified
+signal to its output.</p>
+
+<p>Second, we see a time limited triggering of the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>. The node is
+triggered 5 seconds into the future and is stopped 10 seconds after it starts.
+The way the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> is designed, once the oscillator node has stopped,
+it becomes rather useless and needs to be discarded. This is because start/stop
+can be used only once on source nodes. Therefore when using an <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
+as in this example, the references to <code>osc</code> and <code>gain</code> are no longer necessary
+and we can add the following lines at the end of the above code block.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="nx">osc</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+</span><span class='line'><span class="nx">gain</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With no references holding the oscillator and gain nodes from garbage collection,
+one might think that they might be destroyed soon after the references are
+given up, before the oscillator gets a chance to generate any sound. Fortunately,
+the oscillator holds a reference to itself until its stop time is reached,
+after which the reference is released and the subgraph between the source and the
+context destination is destroyed. This behaviour of native source nodes is
+documented in the <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">Dynamic Lifetime</a> section of the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> documentation.</p>
+
+<h2><a name="abstracting-chime-model"></a>Abstracting the chime model</h2>
+
+<p>The chime model described in the previous section only plays one chime. This is
+practically useless in the real world. A more useful incarnation of the chime model
+would permit us to trigger a chime at any time we want and at any frequency
+we want as well. The model manages the nodes necessary for its function
+purely internally.</p>
+
+<p><img src="http://srikumarks.github.com/images/chime.svg"></p>
+
+<p>This is easily encapsulated as a function &#8211;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">AC</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">webkitAudioContext</span><span class="p">();</span> <span class="c1">// We&#39;ll assume this here onwards.</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">function</span> <span class="nx">chime</span><span class="p">(</span><span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createGainNode</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">setTargetAtTime</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">);</span>
+</span><span class='line'>    <span class="c1">// References to osc and gain are given up</span>
+</span><span class='line'>    <span class="c1">// upon return from chime().</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="replacing-gain-node-with-scriptprocessornode"></a>Replacing the gain node with a ScriptProcessorNode</h2>
+
+<p>Now let&#8217;s consider what happens if we try to replace the gain node&#8217;s behaviour
+(limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>.</p>
+
+<figure class='code'><figcaption><span><a name="chime_jsgain">chime_jsgain</a> A straightforward replacement of the gain node with a script node.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">AC</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">webkitAudioContext</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">function</span> <span class="nx">chime_jsgain</span><span class="p">(</span><span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">amplitude</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">decay</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">exp</span><span class="p">(</span><span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">));</span>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">N</span><span class="p">,</span> <span class="nx">inp</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">inp</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">N</span> <span class="o">=</span> <span class="nx">out</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">amplitude</span> <span class="o">*=</span> <span class="nx">decay</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">amplitude</span> <span class="o">*</span> <span class="nx">inp</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>    <span class="p">}());</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><a name="vaninshing-script-node"></a>Problem 1: The vanishing script node</h3>
+
+<p>If you try to make a chime using <a href="#chime_jsgain">chime_jsgain</a>, you&#8217;ll find
+that the sound stops abruptly well before the 10 seconds duration given.  This
+is because the script node is garbage collected almost immediately.  This is
+a <a href="https://code.google.com/p/chromium/issues/detail?id=82795">WebKit implementation bug</a>. The oscillator node, which has a
+persistent reference till stop time, holds a reference to the script node
+through its output, and yet the script node is garbage collected. A known
+workaround for this bug is to maintain a <em>global</em> reference to the script node.
+For this, we can use the following simple scheme &#8211;</p>
+
+<p><em>edit</em>: Added link to issue.</p>
+
+<figure class='code'><figcaption><span><a name="keep">keep</a> Preserving script nodes.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">var</span> <span class="nx">scriptNodes</span> <span class="o">=</span> <span class="p">{};</span>
+</span><span class='line'><span class="kd">var</span> <span class="nx">keep</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">nextNodeID</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">node</span><span class="p">.</span><span class="nx">id</span> <span class="o">=</span> <span class="nx">node</span><span class="p">.</span><span class="nx">id</span> <span class="o">||</span> <span class="p">(</span><span class="nx">nextNodeID</span><span class="o">++</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">scriptNodes</span><span class="p">[</span><span class="nx">node</span><span class="p">.</span><span class="nx">id</span><span class="p">]</span> <span class="o">=</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'><span class="p">}());</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Using the <code>keep</code> utility, we can now rewrite <code>chime_jsnode</code> as &#8211;</p>
+
+<figure class='code'><figcaption><span>Keeping around a global reference to the script node.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">chime_jsgain</span><span class="p">(</span><span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="c1">// ...</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>    <span class="c1">// ...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will result in the script node being preserved during the course of
+the chime.</p>
+
+<h3><a name="eternal-script-node"></a>Problem 2: The eternal script node</h3>
+
+<p>With the modifications of the preceding section, the oscillator node will
+disappear after 10 seconds but the script node will persist and continue to be
+processed. To prevent this, we make arrangement for the script node to be
+removed from the graph and for its global reference to be dropped once it has
+processed enough samples.</p>
+
+<figure class='code'><figcaption><span><a name="drop">drop</a> Dropping the global reference to a node.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">drop</span><span class="p">(</span><span class="nx">node</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">delete</span> <span class="nx">scriptNodes</span><span class="p">[</span><span class="nx">node</span><span class="p">.</span><span class="nx">id</span><span class="p">];</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We incorporate the new <code>drop</code> function into <code>chime_jsnode</code> as follows &#8211;</p>
+
+<figure class='code'><figcaption><span>A script implementation of gain node with proper end of life management.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">chime_jsgain</span><span class="p">(</span><span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">amplitude</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">decay</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">exp</span><span class="p">(</span><span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">));</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">stopTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">ceil</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">N</span><span class="p">,</span> <span class="nx">inp</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="k">if</span> <span class="p">(</span><span class="nx">finished</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">return</span><span class="p">;</span> <span class="c1">// Don&#39;t do anything after stopTime has elapsed.</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="nx">inp</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">// Limit the number of samples we compute.</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">now_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>            <span class="nx">N</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">out</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">stopTime_samples</span> <span class="o">-</span> <span class="nx">now_samples</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">amplitude</span> <span class="o">*=</span> <span class="nx">decay</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">amplitude</span> <span class="o">*</span> <span class="nx">inp</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="k">if</span> <span class="p">(</span><span class="nx">N</span> <span class="o">&lt;</span> <span class="nx">out</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="c1">// Reached end time before end of buffer.</span>
+</span><span class='line'>                <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</span><span class='line'>                <span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>                    <span class="nx">drop</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'>                    <span class="nx">osc</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>                    <span class="nx">gain</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>                <span class="p">},</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>    <span class="p">}());</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We now have a script node based implementation that works like the native
+implementation in all respects. This kind of &#8220;stop time&#8221; behaviour can be
+lifted into a separate function that transforms a <code>function (event, toSamp) {...}</code>
+into an <code>onaudioprocess</code> handler.</p>
+
+<figure class='code'><figcaption><span><a name="scriptWithStopTime">scriptWithStopTime</a> End of life management of script nodes.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">scriptWithStopTime</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">,</span> <span class="nx">handler</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">node</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">ceil</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">node</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">finished</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">toSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">stopTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="nx">handler</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">toSamp</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">toSamp</span> <span class="o">&lt;</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">drop</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">);</span>
+</span><span class='line'>                <span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>            <span class="p">},</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Using <a href="#scriptWithStopTime">scriptWithStopTime</a>, we can now rewrite <code>chime_jsgain</code> as &#8211;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">chime_jsgain</span><span class="p">(</span><span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">scriptWithStopTime</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">,</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">amplitude</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">decay</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">exp</span><span class="p">(</span><span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">));</span>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">N</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">inp</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">inp</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">amplitude</span> <span class="o">*=</span> <span class="nx">decay</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">amplitude</span> <span class="o">*</span> <span class="nx">inp</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>    <span class="p">}()));</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="replacing-oscillator-with-scriptprocessornode"></a>Replacing the oscillator with a ScriptProcessorNode</h2>
+
+<p>Now, let&#8217;s consider what happens if we try to implement the <a href="http://www.w3.org/TR/webaudio/#OscillatorNode">OscillatorNode</a>
+(limited to this example) using a <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a>. We can use
+<a href="#scriptWithStopTime">scriptWithStopTime</a> to take a first shot at it.
+While we&#8217;re there, we&#8217;ll also generalize the chime model to take a time
+at which to trigger the chime.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">chimeJS</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">freq</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">t</span> <span class="o">||</span> <span class="mf">0.0</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">t</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">scriptWithStopTime</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">,</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">phi</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">dphi</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span> <span class="o">*</span> <span class="nx">freq</span> <span class="o">/</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">N</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">N</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">phi</span> <span class="o">+=</span> <span class="nx">dphi</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sin</span><span class="p">(</span><span class="nx">phi</span><span class="p">);</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>    <span class="p">}()));</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createGainNode</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">setValueAtTime</span><span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">setTargetAtTime</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nx">t</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">gain</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Exposing the start time makes obvious a few design flaws &#8211;</p>
+
+<ol>
+<li><p>If you schedule a chime into the future instead of &#8220;right now&#8221;,
+the script node oscillator will keep running from &#8220;right now&#8221; until
+the end. The period from &#8220;now&#8221; to the scheduled start time is all
+wasted computation.</p></li>
+<li><p>The node responsible for the chime starting on time is the <code>gain</code>
+node. Since the oscillator is continuously running, the phase at
+which the oscillator begins will depend on the time passed in,
+but ideally we want the oscillator to start with phase 0 when
+the chime starts .. and we want it to be sample accurate.</p></li>
+</ol>
+
+
+<p>To solve the wasted computation problem, we can make the <code>onaudioprocess</code>
+be a no-op until the start time. This is best done by writing a
+<code>scriptWithStartStopTime</code> as we did with <code>scriptWithStopTime</code>.</p>
+
+<figure class='code'><figcaption><span><a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Removing wasted computation.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">scriptWithStartStopTime</span><span class="p">(</span><span class="nx">startTime</span><span class="p">,</span> <span class="nx">stopTime</span><span class="p">,</span> <span class="nx">handler</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">console</span><span class="p">.</span><span class="nx">assert</span><span class="p">(</span><span class="nx">stopTime</span> <span class="o">&gt;=</span> <span class="nx">startTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">node</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">startTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">startTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">ceil</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">node</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">finished</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">);</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">fromSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">startTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">fromSamp</span> <span class="o">&gt;=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="c1">// Not started yet.</span>
+</span><span class='line'>            <span class="k">return</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">toSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">stopTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Handler signature changed to include both start and stop indices.</span>
+</span><span class='line'>        <span class="nx">handler</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">fromSamp</span><span class="p">,</span> <span class="nx">toSamp</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">toSamp</span> <span class="o">&lt;</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">drop</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">);</span>
+</span><span class='line'>                <span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>            <span class="p">},</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The above version saves <em>some</em> computation but not all. The JS node does not
+need to receive any callbacks whatsoever until it is time to start generating
+samples. To achieve this, we need to schedule the node to connect and start
+just in time, say 0.1 seconds before the scheduled start time. To do this,
+we need to generalize <code>scriptWithStartStopTime</code> to work with the nodes
+to which the script node is expected to connect.</p>
+
+<figure class='code'><figcaption><span><a name="scriptWithStartStopTime2">scriptWithStartStopTime</a> Delayed node setup.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">scriptWithStartStopTime</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">output</span><span class="p">,</span> <span class="nx">startTime</span><span class="p">,</span> <span class="nx">stopTime</span><span class="p">,</span> <span class="nx">handler</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">startTime</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">startTime</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">stopTime</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">console</span><span class="p">.</span><span class="nx">assert</span><span class="p">(</span><span class="nx">stopTime</span> <span class="o">&gt;=</span> <span class="nx">startTime</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">kBufferLength</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span> <span class="c1">// samples</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">prepareAheadTime</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span> <span class="c1">// seconds</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">startTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">startTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">ceil</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">onaudioprocess</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">finished</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span><span class="p">;</span> <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">);</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">fromSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">startTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">fromSamp</span> <span class="o">&gt;=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span><span class="p">;</span> <span class="c1">// Not started yet.</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">toSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">stopTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Handler signature changed to include both start and stop indices.</span>
+</span><span class='line'>        <span class="nx">handler</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">fromSamp</span><span class="p">,</span> <span class="nx">toSamp</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">toSamp</span> <span class="o">&lt;</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">drop</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">);</span>
+</span><span class='line'>                <span class="nx">input</span> <span class="o">&amp;&amp;</span> <span class="nx">input</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>                <span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>            <span class="p">},</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">prepareNode</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">node</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="nx">kBufferLength</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>        <span class="nx">node</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="nx">onaudioprocess</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Setup the necessary connections.</span>
+</span><span class='line'>        <span class="nx">input</span> <span class="o">&amp;&amp;</span> <span class="nx">input</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">node</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">output</span> <span class="o">&amp;&amp;</span> <span class="nx">node</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">dt</span> <span class="o">=</span> <span class="nx">startTime</span> <span class="o">-</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">dt</span> <span class="o">&lt;=</span> <span class="nx">prepareAheadTime</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">prepareNode</span><span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">prepareNode</span><span class="p">,</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="mi">1000</span> <span class="o">*</span> <span class="nx">dt</span><span class="p">));</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>We can use <code>scriptWithStartStopTime</code> to include such dynamically determined
+source or processing nodes within a subgraph &#8230; except when two such nodes
+need to be connected to each other and both remain unrealized for a while. In
+such cases, we can use an intermediate unity gain node for simplicity. Here
+then is our final chime model with a js node for the gain or the oscillator.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">chime_jsosc</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">freq</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">t</span> <span class="o">||</span> <span class="mf">0.0</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">t</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createGainNode</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">setValueAtTime</span><span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">gain</span><span class="p">.</span><span class="nx">setTargetAtTime</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nx">t</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">gain</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">scriptWithStartStopTime</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="nx">gain</span><span class="p">,</span> <span class="nx">t</span><span class="p">,</span> <span class="nx">stopTime</span><span class="p">,</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">phi</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">dphi</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">PI</span> <span class="o">*</span> <span class="nx">freq</span> <span class="o">/</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">fromSamp</span><span class="p">,</span> <span class="nx">toSamp</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="nx">fromSamp</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">toSamp</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">phi</span> <span class="o">+=</span> <span class="nx">dphi</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sin</span><span class="p">(</span><span class="nx">phi</span><span class="p">);</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>    <span class="p">}()));</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">function</span> <span class="nx">chime_jsgain</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">freq</span><span class="p">,</span> <span class="nx">output</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">freq</span> <span class="o">=</span> <span class="nx">freq</span> <span class="o">||</span> <span class="mf">880.0</span><span class="p">;</span>
+</span><span class='line'>    <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">t</span> <span class="o">||</span> <span class="mf">0.0</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">output</span> <span class="o">=</span> <span class="nx">output</span> <span class="o">||</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime</span> <span class="o">=</span> <span class="nx">t</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">osc</span> <span class="o">=</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">createOscillator</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">frequency</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">freq</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">gain</span> <span class="o">=</span> <span class="nx">scriptWithStartStopTime</span><span class="p">(</span><span class="nx">osc</span><span class="p">,</span> <span class="nx">output</span><span class="p">,</span> <span class="nx">t</span><span class="p">,</span> <span class="nx">stopTime</span><span class="p">,</span> <span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">amplitude</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">;</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">decay</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">exp</span><span class="p">(</span><span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">));</span>
+</span><span class='line'>        <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">fromSamp</span><span class="p">,</span> <span class="nx">toSamp</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="kd">var</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">inp</span><span class="p">,</span> <span class="nx">out</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">inp</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="nx">out</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">getChannelData</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>            <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="nx">fromSamp</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">toSamp</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">,</span> <span class="nx">amplitude</span> <span class="o">*=</span> <span class="nx">decay</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">out</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">amplitude</span> <span class="o">*</span> <span class="nx">inp</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">};</span>
+</span><span class='line'>    <span class="p">}()));</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">osc</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="accounting-for-tail-time"></a>Accounting for tail time</h2>
+
+<p>The gain node is simple in that it produces one output sample for each input
+sample it receives on its input pin. Other node types, especially filter and
+convolution nodes, may &#8220;tail off&#8221; well after the input to these nodes has
+ceased. In other words, the true stop time of a node at which the node is
+free to be garbage collected is at the end of such a tail time, which may
+be only known when the node is running.</p>
+
+<p>A simple way to account for this is to have the handler passed to
+<code>scriptWithStartStopTime</code> use the <code>toSamp</code> argument only for information and
+return the number of samples it actually produced. If the handler has produced
+samples up to the buffer&#8217;s capacity, then it cannot be stopped.  If it stopped
+somewhere before the end of the buffer, then it can be taken to be finished and
+cleanup can be triggered. This logic can be expressed in a modified
+<code>scriptWithStartStopTime</code> as shown below &#8211;</p>
+
+<figure class='code'><figcaption><span><a name="final-scriptWithStartStopTime">scriptWithStartStopTime</a> Supporting tail time.</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+</pre></td><td class='code'><pre><code class='js'><span class='line'><span class="kd">function</span> <span class="nx">scriptWithStartStopTime</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">output</span><span class="p">,</span> <span class="nx">startTime</span><span class="p">,</span> <span class="nx">stopTime</span><span class="p">,</span> <span class="nx">handler</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="nx">startTime</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">startTime</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">stopTime</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">stopTime</span><span class="p">,</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">console</span><span class="p">.</span><span class="nx">assert</span><span class="p">(</span><span class="nx">stopTime</span> <span class="o">&gt;=</span> <span class="nx">startTime</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">kBufferLength</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span> <span class="c1">// samples</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">prepareAheadTime</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span> <span class="c1">// seconds</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">startTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">startTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">stopTime_samples</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">ceil</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">*</span> <span class="nx">stopTime</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">onaudioprocess</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">finished</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span><span class="p">;</span> <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">t</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span> <span class="o">*</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">sampleRate</span><span class="p">);</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">fromSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">startTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">fromSamp</span> <span class="o">&gt;=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span><span class="p">;</span> <span class="c1">// Not started yet.</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">toSamp</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">stopTime_samples</span> <span class="o">-</span> <span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Return value of handler is used to decide when to stop. The handler is</span>
+</span><span class='line'>        <span class="c1">// required to produce as many samples as possible. If it still can&#39;t fill</span>
+</span><span class='line'>        <span class="c1">// up the buffer, it is deemed to have finished.</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">samplesProduced</span> <span class="o">=</span> <span class="nx">handler</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">fromSamp</span><span class="p">,</span> <span class="nx">toSamp</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="nx">fromSamp</span> <span class="o">+</span> <span class="nx">samplesProduced</span> <span class="o">&lt;</span> <span class="nx">event</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+</span><span class='line'>            <span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">drop</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">);</span>
+</span><span class='line'>                <span class="nx">input</span> <span class="o">&amp;&amp;</span> <span class="nx">input</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>                <span class="nx">event</span><span class="p">.</span><span class="nx">node</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+</span><span class='line'>            <span class="p">},</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">function</span> <span class="nx">prepareNode</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kd">var</span> <span class="nx">node</span> <span class="o">=</span> <span class="nx">keep</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">createScriptProcessor</span><span class="p">(</span><span class="nx">kBufferLength</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+</span><span class='line'>        <span class="nx">node</span><span class="p">.</span><span class="nx">onaudioprocess</span> <span class="o">=</span> <span class="nx">onaudioprocess</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Setup the necessary connections.</span>
+</span><span class='line'>        <span class="nx">input</span> <span class="o">&amp;&amp;</span> <span class="nx">input</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">node</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">output</span> <span class="o">&amp;&amp;</span> <span class="nx">node</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">output</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">dt</span> <span class="o">=</span> <span class="nx">startTime</span> <span class="o">-</span> <span class="nx">AC</span><span class="p">.</span><span class="nx">currentTime</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">dt</span> <span class="o">&lt;=</span> <span class="nx">prepareAheadTime</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">prepareNode</span><span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">prepareNode</span><span class="p">,</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="mi">1000</span> <span class="o">*</span> <span class="nx">dt</span><span class="p">));</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">node</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><a name="reflections-on-api"></a>Reflections on the API</h2>
+
+<p>The <a href="#final-scriptWithStartStopTime">final form of scriptWithStartStopTime</a>
+expresses functionality that is essential to the use of script nodes as
+algorithmic signal sources and signal processors that can be scheduled
+to sample accuracy. Although this function adds the required functionality,
+the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> would be better off with a script node type whose
+lifetime can be managed just like the native nodes and suppor the
+dynamic behaviour available with the native nodes.</p>
+
+<p>Not having it builtin results in an inconsistency that is awkward to
+work around - the fact that <code>start(t)</code> and <code>stop(t)</code> methods added in pure
+Javascript are not only necessary for script nodes that are pure signal
+generators, but also for signal processors. This is because a script node might
+otherwise end up wasting compute cycles either idling or computing audio that
+is going to be discarded by the rest of the chain. A <code>stop(t)</code> method is
+necessary for such processor nodes because the <a href="http://www.w3.org/TR/webaudio">Web Audio API</a> does not
+currently provide any notification mechanisms for monitoring connections to a
+node&#8217;s input and output so that processor nodes can self destruct when their
+inputs die.</p>
+
+<h2><a name="concluding-suggestions"></a>Concluding suggestions</h2>
+
+<p>The use case worked through in this post demonstrates how abstractions built on
+other nodes do not extend to script nodes without special considerations. The
+two kinds of usages for script nodes discussed here &#8211; sources and signal
+processors &#8211; are common scenarios. Having the following features built into
+the <a href="http://www.w3.org/TR/webaudio/#ScriptProcessorNode">ScriptProcessorNode</a> helps avoid the problems that crop up in
+straightfoward usage of script nodes.</p>
+
+<ol>
+<li>Permit creation of script nodes without inputs. This better models source
+nodes. Passing 0 for &#8220;number of input channels&#8221; may be enough at the API
+level.</li>
+<li>Add <code>start(t)</code> and <code>stop(t)</code> methods to permit script nodes to be used as
+signal sources, with such nodes not taking up any system resources during
+their inactive periods.</li>
+<li>Add <a href="http://www.w3.org/TR/webaudio/#DynamicLifetime">dynamic lifetime</a> support similar to native nodes, whereby unreferenced
+&#8220;signal processor&#8221; script nodes driven by source nodes are automatically
+released once the source node finishes, even if the source node is itself a
+script node. To achieve this, the time at which the inputs cease must be
+available as part of the event structure passed to the <code>onaudioprocess</code>
+callback, so that the callback can begin any tail phase that it needs to
+complete before it commits suicide.</li>
+<li>Specify a convention and/or API to support tail times beyond
+the time indicated in a stop(t) call or after its inputs have
+been end-of-lifed.</li>
+</ol>
+
+
+<h3><a name="stellers-jsnode-model"></a>PS: Steller&#8217;s jsnode model</h3>
+
+<p>The <a href="https://github.com/srikumarks/steller">Steller</a> library features a <a href="https://github.com/srikumarks/steller/blob/experimental_buildsys/src/models/jsnode.js">jsnode</a> model that wraps the API&#8217;s script
+node into a node type that can be scheduled as discussed in this post. It also
+adds some conveniences such as multiple inputs (albeit single channel), and
+a-rate controllable and schedulable <a href="http://www.w3.org/TR/webaudio/#AudioParam">AudioParam</a> parameters. You can use
+Steller&#8217;s jsnode model like this -</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='html'><span class='line'><span class="nt">&lt;script </span><span class="na">src=</span><span class="s">&quot;http://sriku.org/lib/steller/steller.min.js&quot;</span><span class="nt">&gt;&lt;/script&gt;</span>
+</span><span class='line'><span class="nt">&lt;script&gt;</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">sh</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">org</span><span class="p">.</span><span class="nx">anclab</span><span class="p">.</span><span class="nx">steller</span><span class="p">.</span><span class="nx">Scheduler</span><span class="p">(</span><span class="k">new</span> <span class="nx">webkitAudioContext</span><span class="p">);</span>
+</span><span class='line'>    <span class="kd">var</span> <span class="nx">jsn</span> <span class="o">=</span> <span class="nx">sh</span><span class="p">.</span><span class="nx">models</span><span class="p">.</span><span class="nx">jsnode</span><span class="p">({</span>
+</span><span class='line'>        <span class="nx">numberOfInputs</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+</span><span class='line'>        <span class="nx">numberOfOutputs</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+</span><span class='line'>        <span class="nx">onaudioprocess</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="c1">// ...</span>
+</span><span class='line'>            <span class="k">return</span> <span class="nx">toSamp</span> <span class="o">-</span> <span class="nx">fromSamp</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}});</span>
+</span><span class='line'>    <span class="nx">jsn</span><span class="p">.</span><span class="nx">connect</span><span class="p">(</span><span class="nx">AC</span><span class="p">.</span><span class="nx">destination</span><span class="p">);</span>
+</span><span class='line'>    <span class="nx">sh</span><span class="p">.</span><span class="nx">play</span><span class="p">(</span><span class="nx">sh</span><span class="p">.</span><span class="nx">fire</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">clock</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">jsn</span><span class="p">.</span><span class="nx">start</span><span class="p">(</span><span class="nx">clock</span><span class="p">.</span><span class="nx">t</span><span class="p">);</span>
+</span><span class='line'>        <span class="nx">jsn</span><span class="p">.</span><span class="nx">stop</span><span class="p">(</span><span class="nx">clock</span><span class="p">.</span><span class="nx">t</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}));</span>
+</span><span class='line'><span class="nt">&lt;/script&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Exploring graha bhedams]]></title>
     <link href="http://srikumarks.github.com/blog/2012/12/30/exploring-grha-bhedams/"/>
-    <updated>2012-12-30T15:43:00+08:00</updated>
+    <updated>2012-12-30T15:43:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/12/30/exploring-grha-bhedams</id>
     <content type="html"><![CDATA[<p>Here is a <a href="http://srikumarks.github.com/demos/bhedam">demo web app</a> for exploring rāgās and their bhēdams.</p>
 
@@ -38,7 +1120,7 @@ purpose as it stands. Have fun with it!</p>
   <entry>
     <title type="html"><![CDATA[Scratch pad for text with diacritics]]></title>
     <link href="http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics/"/>
-    <updated>2012-12-27T10:09:00+08:00</updated>
+    <updated>2012-12-27T10:09:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/12/27/scratch-pad-for-text-with-diacritics</id>
     <content type="html"><![CDATA[<p>Roman text with a few choice diacritics are a common need when writing about
 Indian classical music. Creating unicode text with diacritics that can be
@@ -68,7 +1150,7 @@ Chrome/Safari on Windows/Linux, please let me know in the comments.</p>
   <entry>
     <title type="html"><![CDATA[A critique of Tuna]]></title>
     <link href="http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna/"/>
-    <updated>2012-11-09T00:00:00+08:00</updated>
+    <updated>2012-11-09T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/11/09/a-critique-of-tuna</id>
     <content type="html"><![CDATA[<p>Google has open sourced the <a href="http://github.com/Dinahmoe/tuna">Tuna</a> set of effects used in their <a href="http://www.google.com/?q=jam+with+chrome">Jam with Chrome</a>
 project. Here, I collect some thoughts about the code design decisions for their
@@ -171,7 +1253,7 @@ approach is much more suitable in this situation.</p>
   <entry>
     <title type="html"><![CDATA[On eval and evil.]]></title>
     <link href="http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil/"/>
-    <updated>2012-08-28T00:00:00+08:00</updated>
+    <updated>2012-08-28T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/08/28/on-eval-being-evil</id>
     <content type="html"><![CDATA[<p>&#8220;eval is evil&#8221; has become a maxim repeated in the Javascript community.
 Douglas Crockford, in <a href="http://shop.oreilly.com/product/9780596517748.do">Javascript: The Good Parts</a>, rightly advises against
@@ -628,7 +1710,7 @@ Remember - there is always something &#8220;good&#8221; in every &#8220;evil&#82
   <entry>
     <title type="html"><![CDATA[Toy language using j-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions/"/>
-    <updated>2012-04-30T00:00:00+08:00</updated>
+    <updated>2012-04-30T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/04/30/toy-language-using-j-expressions</id>
     <content type="html"><![CDATA[<p>Posted a &#8220;stream of thought&#8221; compiler for a toy language based
 on the idea of j-expressions as a representation for ASTs.</p>
@@ -644,7 +1726,7 @@ on the idea of j-expressions as a representation for ASTs.</p>
   <entry>
     <title type="html"><![CDATA[J-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/15/j-expressions/"/>
-    <updated>2012-04-15T00:00:00+08:00</updated>
+    <updated>2012-04-15T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/04/15/j-expressions</id>
     <content type="html"><![CDATA[<p><a href="http://www.json.org">JSON</a> has become a kind of de-facto standard for sharing data among services
 on the web. The Lisp folks have enjoyed this luxury ever since &#8230; well ever
@@ -807,7 +1889,7 @@ lack of support for tail call elimination.</p>
   <entry>
     <title type="html"><![CDATA[Creating DSLs in Javascript using J-expressions]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions/"/>
-    <updated>2012-04-14T00:00:00+08:00</updated>
+    <updated>2012-04-14T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/04/14/creating-dsls-in-javascript-using-j-expressions</id>
     <content type="html"><![CDATA[<p>Scheme and Lisp have for long had powerful meta-programming abilities due to
 the syntax of their language being the same as the syntax for the main data
@@ -1289,7 +2371,7 @@ asop&#8221; :)</p>
   <entry>
     <title type="html"><![CDATA[A mental model for variables and closures in Javascript]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/13/a-mental-model-for-variables-and-closures-in-javascript/"/>
-    <updated>2012-04-13T00:00:00+08:00</updated>
+    <updated>2012-04-13T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/04/13/a-mental-model-for-variables-and-closures-in-javascript</id>
     <content type="html"><![CDATA[<p>Closures and variables have a strained relationship in Javascript that causes
 much confusion among newcomers and results in hard to spot bugs even for
@@ -1405,7 +2487,7 @@ being used under the hood.</p>
   <entry>
     <title type="html"><![CDATA[Classes and Javascript]]></title>
     <link href="http://srikumarks.github.com/blog/2012/04/12/classes-and-javascript/"/>
-    <updated>2012-04-12T00:00:00+08:00</updated>
+    <updated>2012-04-12T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/04/12/classes-and-javascript</id>
     <content type="html"><![CDATA[<p>If you have been programming in Java and C++ for a while and are used to
 thinking about problems in terms of classes and inheritance, you may find
@@ -1858,7 +2940,7 @@ function or method call, by translating <code>fn(arg)</code> into <code>fn.call(
   <entry>
     <title type="html"><![CDATA[Social hash as identity]]></title>
     <link href="http://srikumarks.github.com/blog/2012/01/03/social-hash-as-identity/"/>
-    <updated>2012-01-03T00:00:00+08:00</updated>
+    <updated>2012-01-03T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2012/01/03/social-hash-as-identity</id>
     <content type="html"><![CDATA[<p>(This is a &#8220;brain-dump&#8221; post).</p>
 
@@ -1934,7 +3016,7 @@ this can provide some additional difficulty in reproducing the hash as well.</p>
   <entry>
     <title type="html"><![CDATA[Newcomb's problem and quantum physics]]></title>
     <link href="http://srikumarks.github.com/blog/2011/05/07/newcombs-problem-and-quantum-physics/"/>
-    <updated>2011-05-07T00:00:00+08:00</updated>
+    <updated>2011-05-07T00:00:00+05:30</updated>
     <id>http://srikumarks.github.com/blog/2011/05/07/newcombs-problem-and-quantum-physics</id>
     <content type="html"><![CDATA[<p>How would <a href="http://lesswrong.com/lw/nc/newcombs_problem_and_regret_of_rationality/">Newcomb&#8217;s problem</a> look like in the physical world, taking quantum
 physics into account? Specifically, would Omega need to know quantum physics in
@@ -1990,6 +3072,170 @@ would be interesting to read :)</p>
 
 <p>PS: I tried to post this on the Less Wrong site but my post isn&#8217;t appearing in
 the comments. So I&#8217;m just posting it here for starters.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[iPad2 wish ..]]></title>
+    <link href="http://srikumarks.github.com/blog/2011/01/26/ipad2-wish/"/>
+    <updated>2011-01-26T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2011/01/26/ipad2-wish</id>
+    <content type="html"><![CDATA[<p>Now that macworld is near, it is time for an iPad wish list.</p>
+
+<p>I have only one item on it - and it is the addition of a wacom tablet-like
+stylus interface on top of the capacitive touch screen. Camera? Nope don&#8217;t
+need. I want a pad where I can draw and scribble with precision, flipping the
+stylus on its head to turn it into an eraser. Ah! That&#8217;ll be a heaven of a
+tablet with both touch and stylus support.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Photon polarization]]></title>
+    <link href="http://srikumarks.github.com/blog/2011/01/05/photon-polarization/"/>
+    <updated>2011-01-05T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2011/01/05/photon-polarization</id>
+    <content type="html"><![CDATA[<p><a href="http://lesswrong.com/lw/pz/decoherence_as_projection/">Decoherence as projection</a> discusses photon polarization as a phenomenon that
+can only be explained quantum mechanically even at the macroscopic level –</p>
+
+<blockquote><p>&#8220;All right,&#8221; you say, &#8220;that just seems weird.&#8221; You pause. &#8220;So it’s probably something quantum.&#8221;
+Indeed it is.</p></blockquote>
+
+<p>Not so quick I think. It is true that if you do this experiment at the
+microscopic level with single photons you’ll have no classical explanation for
+it – erm classical physics doesn’t know about photons to begin with.</p>
+
+<p>At the macroscopic level though, oscillating <code>E</code> and <code>B</code> fields is adequate to
+explain it. A polarizer projects the vectors along it’s polarization. So in the
+“3 filters at 45 degrees” case you get two projections. The fields are
+oscillating in a specific direction after passing through the first filter, say
+with amplitude <code>E</code>. When it hits the second filter, the projected component is
+simply <code>E cos 45</code>. This projected vector is now oscillating along the second
+polarizer’s direction. When this hits the third filter this gets projected
+again and becomes <code>E cos 45 cos 45</code>. So the final amplitude has an energy that is
+<code>pow(cos 45, 4)</code> which is ¼. That is exactly what the quantum explanation gives.</p>
+
+<p>What macroscopic aspect of plane polarization does the above explanation not cover?</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[The Alternate Reality Kit]]></title>
+    <link href="http://srikumarks.github.com/blog/2010/09/19/the-alternate-reality-kit/"/>
+    <updated>2010-09-19T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2010/09/19/the-alternate-reality-kit</id>
+    <content type="html"><![CDATA[<p>The term &#8220;object oriented programming&#8221; has degraded to the point where I no
+longer take self proclaimed OOP enthusiasts seriously. I don&#8217;t believe they
+know what they&#8217;re talking about &#8230; unless they bring up something &#8230; anything
+&#8230; about Smalltalk. If you don&#8217;t have a clue about what makes me go soft upon
+the mere mention of Smalltalk, check out this 1987 video demo of the
+<a href="http://www.open-video.org/details.php?videoid=8050">Alternate Reality Kit</a>. Makes you wish you had that on an iPad today doesn&#8217;t it?</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Primes - Go vs. Haskell]]></title>
+    <link href="http://srikumarks.github.com/blog/2010/09/18/primes-go-vs-haskell/"/>
+    <updated>2010-09-18T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2010/09/18/primes-go-vs-haskell</id>
+    <content type="html"><![CDATA[<p>Recently, a friend of mine pointed out a
+<a href="http://golang.org/s/prime-sieve">concurrent implementation of Eratosthenes&#8217; prime sieve</a>
+expressed in google’s Go programming language. I
+couldn’t resist trying a Haskell version of that same approach.</p>
+
+<!-- more -->
+
+
+<p>What motivates me is that I find that Haskell code is generally more elegant
+than what you can manage with most other languages. For a taste of that, here
+is the simplest expression of a sieve in Haskell, the elegance of which I think
+most other languages will have a tough time beating –</p>
+
+<div><script src='https://gist.github.com/588433.js'></script>
+<noscript><pre><code></code></pre></noscript></div>
+
+
+<p>It says this in effect – “if you divide the infinite list of primes into two
+parts, the latter part doesn’t contain any numbers divisible by the numbers in
+the former.” … or rather it says that for one prime entry at a time.</p>
+
+<p>So what does the concurrent code look like?</p>
+
+<div><script src='https://gist.github.com/588430.js'></script>
+<noscript><pre><code></code></pre></noscript></div>
+
+
+<p>As expected, this is overall much more elegant looking than the equivalent Go
+implementation. Much of the elegance is due to the use of lazy evaluation –
+sending a lazily generated list of numbers through a channel using
+writeList2Chan.</p>
+
+<p>Now, this concurrent code runs like a … no it crawls like a … no I really can’t
+think of a simile that expresses how slow this code is! It generates a handful
+of primes every second on a 2GHz dual core mac! … while the straight forward
+primes blazes through by comparison, despite its poor asymptotic behaviour.</p>
+
+<p>Writing performant Haskell is a black art and this case amply demonstrates
+that. With absolutely no clue about why this is such a drag, I started
+transforming the code to see whether anything improved the performance.</p>
+
+<p>Rather quickly though, I found that rewriting writeList2Chan to run more slowly
+gave a huge boost. Here is what I replaced the writeList2Chan function with –</p>
+
+<div><script src='https://gist.github.com/588439.js'></script>
+<noscript><pre><code></code></pre></noscript></div>
+
+
+<p>The original code above took about 23 seconds to print out up to 227! With this
+change, it takes 9 seconds to print out up to 29573! The most crucial
+ingredient of this change is … the yield !! Without it, the performance drags,
+with it, at least you see thousands of primes fly by every second. Considering
+that we’re chaining one sieve “process” for each prime found, I’d say … not
+bad.</p>
+
+<p>What’s more, you don’t need to replace all the mentions of writeList2Chan. You
+only need to replace</p>
+
+<pre><code>(writeList2Chan ch [2..])
+</code></pre>
+
+<p>with</p>
+
+<pre><code>(slowlyWriteList2Chan ch [2..])
+</code></pre>
+
+<p>to get that kind of performance boost.  Black art indeed!</p>
+
+<p>PS: The <a href="http://golang.org/doc/go_tutorial.html#tmp_353">old link</a> to the Go sieve code is now broken.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Randall Munroe (xkcd) likes these]]></title>
+    <link href="http://srikumarks.github.com/blog/2010/03/12/randall-munroe-xkcd-likes-these/"/>
+    <updated>2010-03-12T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2010/03/12/randall-munroe-xkcd-likes-these</id>
+    <content type="html"><![CDATA[<p>Recently, Randall Munroe held a guest week where some of his favourite
+cartoonists drew for him on <a href="http://xkcd.com/">xkcd</a>. (RM was going through a family illness.) I
+love <a href="http://xkcd.com/">xkcd</a>, so I got curious about what RM likes and decided to jot down links
+to all of them I could find. Here they are –</p>
+
+<ol>
+<li><a href="http://xkcd.com/">xkcd</a> – A tribute link to the ever brilliant RM.</li>
+<li><a href="http://www.smbc-comics.com/">Zach Weiner</a> – Saturday Morning Breakfast Cereal</li>
+<li><a href="http://overcompensating.com/">Jeffrey Rowland</a> – Overcompensating</li>
+<li><a href="http://www.foxtrot.com/">Bill Amend</a> – Foxtrot</li>
+<li><a href="http://www.buttercupfestival.com/">David Troupes</a> – Buttercup Festival</li>
+<li><a href="http://questionablecontent.net/">Jeph Jacques</a> – Questionable Content</li>
+<li><a href="http://www.qwantz.com/index.php">Ryan North</a> – Dinosaur Comics</li>
+<li><a href="http://www.asofterworld.com/">E Horne and J Comeau</a> – A Softer World</li>
+<li><a href="http://www.pbfcomics.com/">Nicholas Gurewich</a> – The Perry Bible Fellowship</li>
+<li><a href="http://www.boltcity.com/copper/">Kazu Kibuishi</a> – Cooper</li>
+<li><a href="http://achewood.com/">Chris Onstad</a> – Achewood</li>
+<li><a href="http://wondermark.com/">David Malki</a> – Wondermark</li>
+<li><a href="http://thisisindexed.com/">Jessica Hagy</a> – Indexed</li>
+</ol>
+
 ]]></content>
   </entry>
   

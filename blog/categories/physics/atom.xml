@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Physics | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/physics/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2013-04-16T10:20:59+05:30</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Photon polarization]]></title>
+    <link href="http://srikumarks.github.com/blog/2011/01/05/photon-polarization/"/>
+    <updated>2011-01-05T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2011/01/05/photon-polarization</id>
+    <content type="html"><![CDATA[<p><a href="http://lesswrong.com/lw/pz/decoherence_as_projection/">Decoherence as projection</a> discusses photon polarization as a phenomenon that
+can only be explained quantum mechanically even at the macroscopic level –</p>
+
+<blockquote><p>"All right," you say, "that just seems weird." You pause. "So it’s probably something quantum."
+Indeed it is.</p></blockquote>
+
+<p>Not so quick I think. It is true that if you do this experiment at the
+microscopic level with single photons you’ll have no classical explanation for
+it – erm classical physics doesn’t know about photons to begin with.</p>
+
+<p>At the macroscopic level though, oscillating <code>E</code> and <code>B</code> fields is adequate to
+explain it. A polarizer projects the vectors along it’s polarization. So in the
+“3 filters at 45 degrees” case you get two projections. The fields are
+oscillating in a specific direction after passing through the first filter, say
+with amplitude <code>E</code>. When it hits the second filter, the projected component is
+simply <code>E cos 45</code>. This projected vector is now oscillating along the second
+polarizer’s direction. When this hits the third filter this gets projected
+again and becomes <code>E cos 45 cos 45</code>. So the final amplitude has an energy that is
+<code>pow(cos 45, 4)</code> which is ¼. That is exactly what the quantum explanation gives.</p>
+
+<p>What macroscopic aspect of plane polarization does the above explanation not cover?</p>
+]]></content>
+  </entry>
+  
+</feed>

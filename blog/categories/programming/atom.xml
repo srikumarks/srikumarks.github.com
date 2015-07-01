@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Programming | Codaholic]]></title>
+  <link href="http://srikumarks.github.com/blog/categories/programming/atom.xml" rel="self"/>
+  <link href="http://srikumarks.github.com/"/>
+  <updated>2013-04-16T10:20:59+05:30</updated>
+  <id>http://srikumarks.github.com/</id>
+  <author>
+    <name><![CDATA[Srikumar]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[The Alternate Reality Kit]]></title>
+    <link href="http://srikumarks.github.com/blog/2010/09/19/the-alternate-reality-kit/"/>
+    <updated>2010-09-19T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2010/09/19/the-alternate-reality-kit</id>
+    <content type="html"><![CDATA[<p>The term "object oriented programming" has degraded to the point where I no
+longer take self proclaimed OOP enthusiasts seriously. I don't believe they
+know what they're talking about ... unless they bring up something ... anything
+... about Smalltalk. If you don't have a clue about what makes me go soft upon
+the mere mention of Smalltalk, check out this 1987 video demo of the
+<a href="http://www.open-video.org/details.php?videoid=8050">Alternate Reality Kit</a>. Makes you wish you had that on an iPad today doesn't it?</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Primes - Go vs. Haskell]]></title>
+    <link href="http://srikumarks.github.com/blog/2010/09/18/primes-go-vs-haskell/"/>
+    <updated>2010-09-18T00:00:00+05:30</updated>
+    <id>http://srikumarks.github.com/blog/2010/09/18/primes-go-vs-haskell</id>
+    <content type="html"><![CDATA[<p>Recently, a friend of mine pointed out a
+<a href="http://golang.org/s/prime-sieve">concurrent implementation of Eratosthenes' prime sieve</a>
+expressed in google’s Go programming language. I
+couldn’t resist trying a Haskell version of that same approach.</p>
+
+<!-- more -->
+
+
+<p>What motivates me is that I find that Haskell code is generally more elegant
+than what you can manage with most other languages. For a taste of that, here
+is the simplest expression of a sieve in Haskell, the elegance of which I think
+most other languages will have a tough time beating –</p>
+
+<p><div><script src='https://gist.github.com/588433.js'></script>
+<noscript><pre><code></code></pre></noscript></div>
+</p>
+
+<p>It says this in effect – “if you divide the infinite list of primes into two
+parts, the latter part doesn’t contain any numbers divisible by the numbers in
+the former.” … or rather it says that for one prime entry at a time.</p>
+
+<p>So what does the concurrent code look like?</p>
+
+<p><div><script src='https://gist.github.com/588430.js'></script>
+<noscript><pre><code></code></pre></noscript></div>
+</p>
+
+<p>As expected, this is overall much more elegant looking than the equivalent Go
+implementation. Much of the elegance is due to the use of lazy evaluation –
+sending a lazily generated list of numbers through a channel using
+writeList2Chan.</p>
+
+<p>Now, this concurrent code runs like a … no it crawls like a … no I really can’t
+think of a simile that expresses how slow this code is! It generates a handful
+of primes every second on a 2GHz dual core mac! … while the straight forward
+primes blazes through by comparison, despite its poor asymptotic behaviour.</p>
+
+<p>Writing performant Haskell is a black art and this case amply demonstrates
+that. With absolutely no clue about why this is such a drag, I started
+transforming the code to see whether anything improved the performance.</p>
+
+<p>Rather quickly though, I found that rewriting writeList2Chan to run more slowly
+gave a huge boost. Here is what I replaced the writeList2Chan function with –</p>
+
+<p><div><script src='https://gist.github.com/588439.js'></script>
+<noscript><pre><code></code></pre></noscript></div>
+</p>
+
+<p>The original code above took about 23 seconds to print out up to 227! With this
+change, it takes 9 seconds to print out up to 29573! The most crucial
+ingredient of this change is … the yield !! Without it, the performance drags,
+with it, at least you see thousands of primes fly by every second. Considering
+that we’re chaining one sieve “process” for each prime found, I’d say … not
+bad.</p>
+
+<p>What’s more, you don’t need to replace all the mentions of writeList2Chan. You
+only need to replace</p>
+
+<pre><code>(writeList2Chan ch [2..])
+</code></pre>
+
+<p>with</p>
+
+<pre><code>(slowlyWriteList2Chan ch [2..])
+</code></pre>
+
+<p>to get that kind of performance boost.  Black art indeed!</p>
+
+<p>PS: The <a href="http://golang.org/doc/go_tutorial.html#tmp_353">old link</a> to the Go sieve code is now broken.</p>
+]]></content>
+  </entry>
+  
+</feed>
