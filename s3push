@@ -1,0 +1,6 @@
+#!/bin/bash
+pushd public
+for f in $*; do
+    s3cmd -P put $f s3://sriku.org/$1
+done
+popd

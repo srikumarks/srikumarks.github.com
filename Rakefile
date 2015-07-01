@@ -273,9 +273,8 @@ task :s3push do
         Rake::Task[:generate].execute
     end
 
-    cd "public" do
-        system "s3cmd sync ./ s3://sriku.org/"
-    end
+    system "./update_blog_on_s3.sh"
+    system "s3redir s3://sriku.org/demos http://sriku.org/demos/"
 end
 
 desc "Update configurations to support publishing to root or sub directory"
